@@ -5,17 +5,15 @@ set -e
 TOKEN=$1
 REF=$2
 REPOSITORY=$3
-# Initial delay in seconds before fetching checks
-INITIAL_DELAY=${4:-5}
 # Interval in seconds between check of checks
-INTERVAL=${5:-10}
+INTERVAL=${4:-10}
 # How long to spin for in seconds before marking job as failed, initial delay not considered
-TIMEOUT=${6:-300}
+TIMEOUT=${5:-300}
 # Self name
-NAME=${7:-"sloth"}
+NAME=${6:-"sloth"}
 # Conclusions of which checks to ignore
 IFS=,
-IGNORE=(${8:-$NAME})
+IGNORE=(${7:-$NAME})
 # Ensure self is ignored
 if [[ ! " ${IGNORE[@]} " =~ " $NAME " ]]; then
   IGNORE+=($NAME)
@@ -24,8 +22,7 @@ unset IFS
 
 echo "Ignoring: ${IGNORE[@]}"
 
-sleep $INITIAL_DELAY
-
+FOUND_JOBS=0
 START=`date +%s`
 
 while :; do
@@ -63,6 +60,7 @@ while :; do
     if [[ " ${IGNORE[@]} " =~ " $job " ]]; then
       echo -n ' (ignored)'
     else
+      FOUND_JOBS=1
       CONCLUSION=`echo "$RUNS" | jq -rj '.[] | select(.name == "'$job'") | .conclusion // "pending"'`
       echo -n " ($CONCLUSION)"
 
@@ -80,6 +78,12 @@ while :; do
 
   if [[ $HAS_FAILURE -eq 1 ]]; then
     exit 1
+  fi
+
+  if [[ $FOUND_JOBS -eq 0 ]]; then
+    sleep $INTERVAL
+
+    continue
   fi
 
   if [[ $PENDING -eq 0 ]]; then
