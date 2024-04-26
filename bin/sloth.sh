@@ -54,7 +54,7 @@ while :; do
   PENDING=0
   HAS_FAILURE=0
 
-  echo "Checks:"
+  echo "::group::Inspecting other checks"
 
   IFS=$'\n'
   for job in $(echo "${RUNS}" | jq -r '.[].name'); do
@@ -78,11 +78,15 @@ while :; do
     echo
   done
 
+  echo "::endgroup::"
+
   if [[ $HAS_FAILURE -eq 1 ]]; then
+    echo "### :sloth: One or more checks failed :x:" >> $GITHUB_STEP_SUMMARY
     exit 1
   fi
 
   if [[ $PENDING -eq 0 ]]; then
+    echo "### :sloth: All checks were successful :rocket:" >> $GITHUB_STEP_SUMMARY
     exit 0
   fi
 
