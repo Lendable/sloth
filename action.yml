@@ -1,5 +1,5 @@
 name: "Lendable's Sloth"
-description: "Lazy check runs checker"
+description: "A GitHub Action that enables optimized and flexible continuous integration suites"
 branding:
   icon: git-merge
   color: orange
