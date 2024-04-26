@@ -1,0 +1,49 @@
+name: "Sloth"
+description: "Lazy check runs checker"
+branding:
+  icon: git-merge
+  color: orange
+inputs:
+  token:
+    description: "GitHub Token"
+    required: true
+  ref:
+    description: "Commit sha, branch, tag, or whatever"
+    required: false
+    default: ${{ github.event.pull_request.head.sha || github.sha }}
+  initial-delay:
+    description: "Initial delay in seconds before fetching checks (default 5)"
+    required: false
+    default: "5"
+  interval:
+    description: "Interval in seconds between check of checks (default 5)"
+    required: false
+    default: "5"
+  timeout:
+    description: "How long to poll for in seconds before marking job as failed, initial delay not considered (default 300)"
+    required: false
+    default: "300"
+  name:
+    description: "Name of the job"
+    required: false
+    default: "sloth"
+  ignored:
+    description: "Conclusions of which jobs to ignore, comma separated"
+    required: false
+    default: ""
+runs:
+  using: "composite"
+  steps:
+    - name: Await CI outcome
+      id: sloth
+      shell: bash
+      run: |
+        ${GITHUB_ACTION_PATH}/bin/sloth.sh \
+        ${{ inputs.token }} \
+        ${{ inputs.ref }} \
+        ${{ github.repository }} \
+        ${{ inputs.initial-delay }} \
+        ${{ inputs.interval }} \
+        ${{ inputs.timeout }} \
+        "${{ inputs.name }}" \
+        "${{ inputs.ignored }}"
