@@ -44,7 +44,7 @@ jobs:
 
 | Name     | Description                                                                                                                           | Required | Default                                                     |
 |----------|---------------------------------------------------------------------------------------------------------------------------------------|----------|-------------------------------------------------------------|
-| token    | GitHub token to use to interact with the GitHub API, unless specific rate limit concerns this should be `${{ secrets.GITHUB_TOKEN }}` | Yes      |                                                             |
+| token    | GitHub token to use to interact with the GitHub API, unless you have rate limit concerns this should be `${{ secrets.GITHUB_TOKEN }}` | Yes      |                                                             |
 | ref      | Git reference to checkout. The default supports Pull Requests and Merge Queues.                                                      |          | `${{ github.event.pull_request.head.sha \|\| github.sha }}` |
 | interval | The number of seconds in between polls of the GitHub API for check run conclusions.                                                   |          | 5                                                           |
 | timeout  | The number of seconds before the job is declare a failure if check runs have not yet concluded.                                       |          | 300                                                         |
