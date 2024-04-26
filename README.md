@@ -38,5 +38,4 @@ jobs:
         uses: lendable/sloth@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          ref: ${{ github.event.pull_request.head.sha || github.sha }} # TODO make default
 ```
