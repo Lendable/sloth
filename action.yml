@@ -1,4 +1,4 @@
-name: "Sloth"
+name: "Lendable's Sloth"
 description: "A GitHub Action that enables optimized and flexible continuous integration suites"
 branding:
   icon: git-merge
