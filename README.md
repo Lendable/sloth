@@ -39,3 +39,14 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 ```
+
+## Inputs
+
+| Name     | Description                                                                                                                           | Required | Default                                                     |
+|----------|---------------------------------------------------------------------------------------------------------------------------------------|----------|-------------------------------------------------------------|
+| token    | GitHub token to use to interact with the GitHub API, unless specific rate limit concerns this should be `${{ secrets.GITHUB_TOKEN }}` | Yes      |                                                             |
+| ref      | Git reference to checkout.. The default supports Pull Requests and Merge Queues.                                                      |          | `${{ github.event.pull_request.head.sha \|\| github.sha }}` |
+| interval | The number of seconds in between polls of the GitHub API for check run conclusions.                                                   |          | 5                                                           |
+| timeout  | The number of seconds before the job is declare a failure if check runs have not yet concluded.                                       |          | 300                                                         |
+| name     | The name of the Sloth's own check run. This is used to ensure Sloth does not wait upon itself.                                        |          | "sloth"                                                     |
+| ignored  | A comma separated list of check run names to ignore when determining an overall result.                                               |          | ""                                                          |
