@@ -27,6 +27,20 @@ if (inputs.ignored.size > 0) {
   console.info("::endgroup::");
 }
 
+const shouldTimeOut = (): boolean => {
+  const executionTime = Math.round(
+    (new Date().getTime() - startTime.getTime()) / 1000,
+  );
+
+  return executionTime > inputs.timeout;
+};
+
+const timedOut = (): void => {
+  console.info("");
+  console.info(`⏰ ${colors.red}Timed out!${colors.reset}`);
+  core.setFailed("Timed out waiting on check runs to all be successful.");
+};
+
 const outputCheckRuns = (icon: string, color: Color, runs: string[]): void => {
   if (runs.length === 0) {
     return;
@@ -63,6 +77,11 @@ const outputCheckRuns = (icon: string, color: Color, runs: string[]): void => {
     core.debug(`Found a total of ${checks.length} relevant check runs`);
 
     if (checks.length === 0) {
+      if (shouldTimeOut()) {
+        timedOut();
+        return;
+      }
+
       console.info(`Slothing, verifying again in ${inputs.interval}s...`);
       await delay(inputs.interval);
       continue;
@@ -103,14 +122,8 @@ const outputCheckRuns = (icon: string, color: Color, runs: string[]): void => {
       return;
     }
 
-    const executionTime = Math.round(
-      (new Date().getTime() - startTime.getTime()) / 1000,
-    );
-
-    if (executionTime > inputs.timeout) {
-      console.info("");
-      console.info(`⏰ ${colors.red}Timed out!${colors.reset}`);
-      core.setFailed("Timed out waiting on check runs to all be successful.");
+    if (shouldTimeOut()) {
+      timedOut();
       return;
     }
 

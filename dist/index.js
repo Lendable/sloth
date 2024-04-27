@@ -29267,6 +29267,15 @@ if (inputs.ignored.size > 0) {
     console.info([...inputs.ignored]);
     console.info("::endgroup::");
 }
+const shouldTimeOut = () => {
+    const executionTime = Math.round((new Date().getTime() - startTime.getTime()) / 1000);
+    return executionTime > inputs.timeout;
+};
+const timedOut = () => {
+    console.info("");
+    console.info(`⏰ ${colors_1.colors.red}Timed out!${colors_1.colors.reset}`);
+    core.setFailed("Timed out waiting on check runs to all be successful.");
+};
 const outputCheckRuns = (icon, color, runs) => {
     if (runs.length === 0) {
         return;
@@ -29293,6 +29302,10 @@ const outputCheckRuns = (icon, color, runs) => {
         checks = checks.filter((v) => v.name !== inputs.name && !inputs.ignored.has(v.name));
         core.debug(`Found a total of ${checks.length} relevant check runs`);
         if (checks.length === 0) {
+            if (shouldTimeOut()) {
+                timedOut();
+                return;
+            }
             console.info(`Slothing, verifying again in ${inputs.interval}s...`);
             await (0, delay_1.delay)(inputs.interval);
             continue;
@@ -29304,13 +29317,11 @@ const outputCheckRuns = (icon, color, runs) => {
             if (!check.conclusion) {
                 pending.push(check.name);
             }
+            else if (failureConclusions.includes(check.conclusion)) {
+                failures.push(check.name);
+            }
             else {
-                if (failureConclusions.includes(check.conclusion)) {
-                    failures.push(check.name);
-                }
-                else {
-                    successful.push(check.name);
-                }
+                successful.push(check.name);
             }
         }
         for (const runs of [successful, failures, pending]) {
@@ -29330,11 +29341,8 @@ const outputCheckRuns = (icon, color, runs) => {
             console.info(`🚀 ${colors_1.colors.green}Success!${colors_1.colors.reset}`);
             return;
         }
-        const executionTime = Math.round((new Date().getTime() - startTime.getTime()) / 1000);
-        if (executionTime > inputs.timeout) {
-            console.info("");
-            console.info(`⏰ ${colors_1.colors.red}Timed out!${colors_1.colors.reset}`);
-            core.setFailed("Timed out waiting on check runs to all be successful.");
+        if (shouldTimeOut()) {
+            timedOut();
             return;
         }
         console.info(`Slothing, verifying again in ${inputs.interval}s...`);
