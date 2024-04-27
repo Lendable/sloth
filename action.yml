@@ -5,14 +5,14 @@ branding:
   color: orange
 inputs:
   token:
-    description: "GitHub Token"
+    description: "GitHub token to use to interact with the GitHub API."
     required: true
   ref:
-    description: "Commit sha, branch, tag, or whatever"
+    description: "Git reference to inspect check runs for. The default supports Pull Requests, Merge Queues as well as branch pushes."
     required: false
     default: ${{ github.event.pull_request.head.sha || github.sha }}
   initial-delay:
-    description: "Initial delay in seconds before fetching checks (default 5)"
+    description: "The number of seconds in between polls of the GitHub API for check run conclusions."
     required: false
     default: "5"
   interval:
@@ -20,15 +20,15 @@ inputs:
     required: false
     default: "5"
   timeout:
-    description: "How long to poll for in seconds before marking job as failed, initial delay not considered (default 300)"
+    description: "The number of seconds before the job is declared a failure if check runs have not yet concluded."
     required: false
     default: "300"
   name:
-    description: "Name of the job"
+    description: "The name of the Sloth's own check run. This is used to ensure Sloth does not wait upon itself."
     required: false
     default: "sloth"
   ignored:
-    description: "Conclusions of which jobs to ignore, comma separated"
+    description: "A comma separated list of check run names to ignore when determining an overall result."
     required: false
     default: ""
 runs:
