@@ -1,0 +1,2 @@
+[*.{js,ts,mjs}]
+indent_size = 2

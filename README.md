@@ -49,4 +49,4 @@ jobs:
 | interval | The number of seconds in between polls of the GitHub API for check run conclusions.                                                    | No       | `5`                                                         |
 | timeout  | The number of seconds before the job is declared a failure if check runs have not yet concluded.                                       | No       | `300`                                                       |
 | name     | The name of the Sloth's own check run. This is used to ensure Sloth does not wait upon itself.                                         | No       | `"sloth"`                                                   |
-| ignored  | A comma separated list of check run names to ignore when determining an overall result.                                                | No       | `""`                                                        |
+| ignored  | A multi-line list of check run names to ignore when determining an overall result.                                                     | No       | `""`                                                        |
