@@ -11,6 +11,13 @@ jobs:
         uses: actions/checkout@v4
         with:
           show-progress: false
+      - name: Setup Node.js
+        id: setup-node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+
       - name: Install dependencies
         run: npm ci
       - name: Lint
