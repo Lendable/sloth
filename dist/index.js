@@ -29262,11 +29262,6 @@ const inputs = {
 };
 const octokit = github.getOctokit(core.getInput("token", { required: true }));
 const failureConclusions = ["failure", "cancelled", "timed_out"];
-if (inputs.ignored.size > 0) {
-    console.info("::group::Ignored check names");
-    console.info([...inputs.ignored]);
-    console.info("::endgroup::");
-}
 const shouldTimeOut = () => {
     const executionTime = Math.round((new Date().getTime() - startTime.getTime()) / 1000);
     return executionTime > inputs.timeout;
@@ -29276,20 +29271,27 @@ const timedOut = () => {
     console.info(`⏰ ${colors_1.colors.red}Timed out!${colors_1.colors.reset}`);
     core.setFailed("Timed out waiting on check runs to all be successful.");
 };
-const outputCheckRuns = (icon, color, runs) => {
-    if (runs.length === 0) {
-        return;
+const logGroup = (name, items) => {
+    if (items.length > 0) {
+        core.startGroup(name);
+        for (const item of items) {
+            console.info(item);
+        }
+        core.endGroup();
     }
-    console.info(`::group::${icon} ${color}${runs.length}${colors_1.colors.reset}`);
-    for (const name of runs) {
-        console.info(name);
-    }
-    console.info("::endgroup::");
 };
-(async () => {
-    while (true) {
-        let checks = [];
+const logCheckRuns = (icon, color, runs) => {
+    if (runs.length > 0) {
+        logGroup(`${icon} ${color}${runs.length}${colors_1.colors.reset}`, runs);
+    }
+};
+if (inputs.ignored.size > 0) {
+    logGroup("Ignored check names", [...inputs.ignored]);
+}
+const waitForCheckRuns = async () => {
+    while (!shouldTimeOut()) {
         console.info("");
+        let checks = [];
         const iterator = octokit.paginate.iterator(octokit.rest.checks.listForRef, {
             owner: github.context.repo.owner,
             repo: github.context.repo.repo,
@@ -29302,10 +29304,6 @@ const outputCheckRuns = (icon, color, runs) => {
         checks = checks.filter((v) => v.name !== inputs.name && !inputs.ignored.has(v.name));
         core.debug(`Found a total of ${checks.length} relevant check runs`);
         if (checks.length === 0) {
-            if (shouldTimeOut()) {
-                timedOut();
-                return;
-            }
             console.info(`Slothing, verifying again in ${inputs.interval}s...`);
             await (0, delay_1.delay)(inputs.interval);
             continue;
@@ -29327,9 +29325,9 @@ const outputCheckRuns = (icon, color, runs) => {
         for (const runs of [successful, failures, pending]) {
             runs.sort();
         }
-        outputCheckRuns("✅", colors_1.colors.green, successful);
-        outputCheckRuns("❌", colors_1.colors.red, failures);
-        outputCheckRuns("⏳", colors_1.colors.reset, pending);
+        logCheckRuns("✅", colors_1.colors.green, successful);
+        logCheckRuns("❌", colors_1.colors.red, failures);
+        logCheckRuns("⏳", colors_1.colors.reset, pending);
         if (failures.length > 0) {
             console.info("");
             console.info(`❗ ${colors_1.colors.red}Failure!${colors_1.colors.reset}`);
@@ -29341,14 +29339,12 @@ const outputCheckRuns = (icon, color, runs) => {
             console.info(`🚀 ${colors_1.colors.green}Success!${colors_1.colors.reset}`);
             return;
         }
-        if (shouldTimeOut()) {
-            timedOut();
-            return;
-        }
         console.info(`Slothing, verifying again in ${inputs.interval}s...`);
         await (0, delay_1.delay)(inputs.interval);
     }
-})();
+    timedOut();
+};
+waitForCheckRuns();
 
 
 /***/ }),
