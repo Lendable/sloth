@@ -3,17 +3,39 @@ on:
   pull_request:
   merge_group:
 
+permissions:
+  contents: read
+
 jobs:
-  verify:
-    runs-on: ubuntu-22.04
+  check-dist:
+    name: Check dist/
+    runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
+        id: checkout
         uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        id: setup-node
+        uses: actions/setup-node@v4
         with:
-          show-progress: false
-      - name: Install dependencies
+          node-version-file: .node-version
+          cache: npm
+
+      - name: Install Dependencies
+        id: install
         run: npm ci
-      - name: Build
-        run: npm run build
-      - name: Verify that built files are up to date
-        run: git diff --exit-code
+
+      - name: Build dist/ Directory
+        id: build
+        run: npm run bundle
+
+      - name: Compare Directories
+        id: diff
+        run: |
+          if [ "$(git diff --ignore-space-at-eol --text dist/ | wc -l)" -gt "0" ]; then
+            echo "Detected uncommitted changes after build. See status below:"
+            git diff --ignore-space-at-eol --text dist/
+            exit 1
+          fi
