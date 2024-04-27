@@ -75,12 +75,11 @@ const outputCheckRuns = (icon: string, color: Color, runs: string[]): void => {
     for (const check of checks) {
       if (!check.conclusion) {
         pending.push(check.name);
-      } else {
-        if (failureConclusions.includes(check.conclusion)) {
+      } else if (failureConclusions.includes(check.conclusion)) {
           failures.push(check.name);
-        } else {
+      } else {
           successful.push(check.name);
-        }
+      }
       }
     }
 
