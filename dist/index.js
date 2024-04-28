@@ -29188,22 +29188,6 @@ function wrappy (fn, cb) {
 
 /***/ }),
 
-/***/ 2100:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.colors = void 0;
-exports.colors = {
-    reset: "\x1b[0m",
-    red: "\x1b[31m",
-    green: "\x1b[32m",
-};
-
-
-/***/ }),
-
 /***/ 653:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -29215,6 +29199,141 @@ async function delay(secs) {
     return new Promise((resolve) => setTimeout(resolve, secs * 1000));
 }
 exports.delay = delay;
+
+
+/***/ }),
+
+/***/ 9517:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Display = void 0;
+const core = __importStar(__nccwpck_require__(2186));
+const colors = {
+    reset: "\x1b[0m",
+    red: "\x1b[31m",
+    green: "\x1b[32m",
+};
+const logAsGroup = (name, lines) => {
+    if (lines.length > 0) {
+        core.startGroup(name);
+        for (const item of lines) {
+            console.info(item);
+        }
+        core.endGroup();
+    }
+};
+const logCheckRuns = (icon, color, runs) => {
+    if (runs.length > 0) {
+        logAsGroup(`${icon} ${color}${runs.length}${colors.reset}`, runs);
+    }
+};
+exports.Display = {
+    timedOut: () => {
+        console.info("");
+        console.info(`⏰ ${colors.red}Timed out!${colors.reset}`);
+    },
+    delaying: (seconds) => {
+        console.info(`🦥 Inspecting again in ${seconds}s...`);
+    },
+    overallFailure: () => {
+        console.info("");
+        console.info(`❗ ${colors.red}Failure!${colors.reset}`);
+    },
+    overallSuccess: () => {
+        console.info("");
+        console.info(`🚀 ${colors.green}Success!${colors.reset}`);
+    },
+    startingIteration: () => {
+        console.info("");
+    },
+    ignoredCheckNames: (ignoredCheckNames) => {
+        if (ignoredCheckNames.size > 0) {
+            logAsGroup("Ignored check names", [...ignoredCheckNames]);
+        }
+    },
+    relevantCheckRuns: (checkRuns) => {
+        logCheckRuns("✅", colors.green, checkRuns.succeeded);
+        logCheckRuns("❌", colors.red, checkRuns.failed);
+        logCheckRuns("⏳", colors.reset, checkRuns.pending);
+    },
+};
+
+
+/***/ }),
+
+/***/ 8896:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.fetchCheckRuns = void 0;
+const github = __importStar(__nccwpck_require__(5438));
+const inputs_1 = __nccwpck_require__(7063);
+const relevant_check_runs_1 = __nccwpck_require__(3695);
+const octokit = github.getOctokit(inputs_1.inputs.token);
+const fetchCheckRuns = async () => {
+    const iterator = octokit.paginate.iterator(octokit.rest.checks.listForRef, {
+        ...github.context.repo,
+        ref: inputs_1.inputs.ref,
+        per_page: 100,
+    });
+    let runs = [];
+    for await (const { data } of iterator) {
+        runs = runs.concat(data);
+    }
+    return new relevant_check_runs_1.RelevantCheckRuns(runs.filter((run) => run.name !== inputs_1.inputs.name && !inputs_1.inputs.ignored.has(run.name)));
+};
+exports.fetchCheckRuns = fetchCheckRuns;
 
 
 /***/ }),
@@ -29249,102 +29368,144 @@ var __importStar = (this && this.__importStar) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(2186));
-const github = __importStar(__nccwpck_require__(5438));
-const colors_1 = __nccwpck_require__(2100);
 const delay_1 = __nccwpck_require__(653);
+const fetch_check_runs_1 = __nccwpck_require__(8896);
+const inputs_1 = __nccwpck_require__(7063);
+const display_1 = __nccwpck_require__(9517);
 const startTime = new Date();
-const inputs = {
-    name: core.getInput("name"),
-    interval: Number(core.getInput("interval")),
-    timeout: Number(core.getInput("timeout")),
-    ref: core.getInput("ref"),
-    ignored: new Set(core.getMultilineInput("ignored")),
-};
-const octokit = github.getOctokit(core.getInput("token", { required: true }));
-const failureConclusions = ["failure", "cancelled", "timed_out"];
 const shouldTimeOut = () => {
     const executionTime = Math.round((new Date().getTime() - startTime.getTime()) / 1000);
-    return executionTime > inputs.timeout;
+    return executionTime > inputs_1.inputs.timeout;
 };
-const timedOut = () => {
-    console.info("");
-    console.info(`⏰ ${colors_1.colors.red}Timed out!${colors_1.colors.reset}`);
-    core.setFailed("Timed out waiting on check runs to all be successful.");
-};
-const logGroup = (name, items) => {
-    if (items.length > 0) {
-        core.startGroup(name);
-        for (const item of items) {
-            console.info(item);
-        }
-        core.endGroup();
-    }
-};
-const logCheckRuns = (icon, color, runs) => {
-    if (runs.length > 0) {
-        logGroup(`${icon} ${color}${runs.length}${colors_1.colors.reset}`, runs);
-    }
-};
-if (inputs.ignored.size > 0) {
-    logGroup("Ignored check names", [...inputs.ignored]);
-}
+display_1.Display.ignoredCheckNames(inputs_1.inputs.ignored);
 const waitForCheckRuns = async () => {
     while (!shouldTimeOut()) {
-        console.info("");
-        let checks = [];
-        const iterator = octokit.paginate.iterator(octokit.rest.checks.listForRef, {
-            owner: github.context.repo.owner,
-            repo: github.context.repo.repo,
-            ref: inputs.ref,
-            per_page: 100,
-        });
-        for await (const { data } of iterator) {
-            checks = checks.concat(data);
-        }
-        checks = checks.filter((v) => v.name !== inputs.name && !inputs.ignored.has(v.name));
-        core.debug(`Found a total of ${checks.length} relevant check runs`);
-        if (checks.length === 0) {
-            console.info(`Slothing, verifying again in ${inputs.interval}s...`);
-            await (0, delay_1.delay)(inputs.interval);
+        display_1.Display.startingIteration();
+        const checkRuns = await (0, fetch_check_runs_1.fetchCheckRuns)();
+        if (checkRuns.total() === 0) {
+            display_1.Display.delaying(inputs_1.inputs.interval);
+            await (0, delay_1.delay)(inputs_1.inputs.interval);
             continue;
         }
-        const pending = [];
-        const failures = [];
-        const successful = [];
-        for (const check of checks) {
-            if (!check.conclusion) {
-                pending.push(check.name);
-            }
-            else if (failureConclusions.includes(check.conclusion)) {
-                failures.push(check.name);
-            }
-            else {
-                successful.push(check.name);
-            }
-        }
-        for (const runs of [successful, failures, pending]) {
-            runs.sort();
-        }
-        logCheckRuns("✅", colors_1.colors.green, successful);
-        logCheckRuns("❌", colors_1.colors.red, failures);
-        logCheckRuns("⏳", colors_1.colors.reset, pending);
-        if (failures.length > 0) {
-            console.info("");
-            console.info(`❗ ${colors_1.colors.red}Failure!${colors_1.colors.reset}`);
+        display_1.Display.relevantCheckRuns(checkRuns);
+        if (checkRuns.isOverallFailure()) {
+            display_1.Display.overallFailure();
             core.setFailed("A check run failed.");
             return;
         }
-        if (pending.length === 0) {
-            console.info("");
-            console.info(`🚀 ${colors_1.colors.green}Success!${colors_1.colors.reset}`);
+        if (checkRuns.isOverallSuccess()) {
+            display_1.Display.overallSuccess();
             return;
         }
-        console.info(`Slothing, verifying again in ${inputs.interval}s...`);
-        await (0, delay_1.delay)(inputs.interval);
+        display_1.Display.delaying(inputs_1.inputs.interval);
+        await (0, delay_1.delay)(inputs_1.inputs.interval);
     }
-    timedOut();
+    display_1.Display.timedOut();
+    core.setFailed("Timed out waiting on check runs to all be successful.");
 };
 waitForCheckRuns();
+
+
+/***/ }),
+
+/***/ 7063:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.inputs = void 0;
+const core = __importStar(__nccwpck_require__(2186));
+const interval = Number(core.getInput("interval"));
+if (!Number.isInteger(interval)) {
+    throw new Error("Invalid interval");
+}
+if (interval < 1) {
+    throw new Error("Interval must be greater than 0");
+}
+const timeout = Number(core.getInput("timeout"));
+if (!Number.isInteger(timeout)) {
+    throw new Error("Invalid timeout");
+}
+if (timeout < 1) {
+    throw new Error("Timeout must be greater than 0");
+}
+exports.inputs = {
+    token: core.getInput("token", { required: true }),
+    name: core.getInput("name"),
+    interval,
+    timeout,
+    ref: core.getInput("ref"),
+    ignored: new Set(core.getMultilineInput("ignored")),
+};
+
+
+/***/ }),
+
+/***/ 3695:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.RelevantCheckRuns = void 0;
+const failureConclusions = ["failure", "cancelled", "timed_out"];
+class RelevantCheckRuns {
+    pending = [];
+    failed = [];
+    succeeded = [];
+    constructor(all) {
+        for (const run of all) {
+            if (!run.conclusion) {
+                this.pending.push(run.name);
+            }
+            else if (failureConclusions.includes(run.conclusion)) {
+                this.failed.push(run.name);
+            }
+            else {
+                this.succeeded.push(run.name);
+            }
+        }
+        this.pending.sort();
+        this.failed.sort();
+        this.succeeded.sort();
+    }
+    isOverallFailure() {
+        return this.failed.length > 0;
+    }
+    isOverallSuccess() {
+        return (!this.isOverallFailure() &&
+            this.pending.length === 0 &&
+            this.succeeded.length > 0);
+    }
+    total() {
+        return this.pending.length + this.failed.length + this.succeeded.length;
+    }
+}
+exports.RelevantCheckRuns = RelevantCheckRuns;
 
 
 /***/ }),
