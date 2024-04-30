@@ -29379,29 +29379,40 @@ const shouldTimeOut = () => {
 };
 display_1.Display.ignoredCheckNames(inputs_1.inputs.ignored);
 const waitForCheckRuns = async () => {
-    while (!shouldTimeOut()) {
-        display_1.Display.startingIteration();
-        const checkRuns = await (0, fetch_check_runs_1.fetchCheckRuns)();
-        if (checkRuns.total() === 0) {
+    try {
+        while (!shouldTimeOut()) {
+            display_1.Display.startingIteration();
+            const checkRuns = await (0, fetch_check_runs_1.fetchCheckRuns)();
+            if (checkRuns.total() === 0) {
+                display_1.Display.delaying(inputs_1.inputs.interval);
+                await (0, delay_1.delay)(inputs_1.inputs.interval);
+                continue;
+            }
+            display_1.Display.relevantCheckRuns(checkRuns);
+            if (checkRuns.isOverallFailure()) {
+                display_1.Display.overallFailure();
+                core.setFailed("A check run failed.");
+                return;
+            }
+            if (checkRuns.isOverallSuccess()) {
+                display_1.Display.overallSuccess();
+                return;
+            }
             display_1.Display.delaying(inputs_1.inputs.interval);
             await (0, delay_1.delay)(inputs_1.inputs.interval);
-            continue;
         }
-        display_1.Display.relevantCheckRuns(checkRuns);
-        if (checkRuns.isOverallFailure()) {
-            display_1.Display.overallFailure();
-            core.setFailed("A check run failed.");
-            return;
-        }
-        if (checkRuns.isOverallSuccess()) {
-            display_1.Display.overallSuccess();
-            return;
-        }
-        display_1.Display.delaying(inputs_1.inputs.interval);
-        await (0, delay_1.delay)(inputs_1.inputs.interval);
+        display_1.Display.timedOut();
+        core.setFailed("Timed out waiting on check runs to all be successful.");
     }
-    display_1.Display.timedOut();
-    core.setFailed("Timed out waiting on check runs to all be successful.");
+    catch (error) {
+        if (error instanceof Error) {
+            core.setFailed(error);
+            return;
+        }
+        else {
+            throw error;
+        }
+    }
 };
 waitForCheckRuns();
 
