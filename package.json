@@ -10,7 +10,7 @@
   },
   "license": "MIT",
   "scripts": {
-    "bundle": "npx ncc build src/index.ts -o dist --license licenses.txt",
+    "bundle": "npx ncc build src/index.ts -o dist --source-map --license licenses.txt",
     "lint": "npx eslint . -c .eslintrc.yml"
   },
   "dependencies": {
