@@ -16,36 +16,45 @@ const shouldTimeOut = (): boolean => {
 Display.ignoredCheckNames(inputs.ignored);
 
 const waitForCheckRuns = async (): Promise<void> => {
-  while (!shouldTimeOut()) {
-    Display.startingIteration();
+  try {
+    while (!shouldTimeOut()) {
+      Display.startingIteration();
 
-    const checkRuns = await fetchCheckRuns();
+      const checkRuns = await fetchCheckRuns();
 
-    if (checkRuns.total() === 0) {
+      if (checkRuns.total() === 0) {
+        Display.delaying(inputs.interval);
+        await delay(inputs.interval);
+        continue;
+      }
+
+      Display.relevantCheckRuns(checkRuns);
+
+      if (checkRuns.isOverallFailure()) {
+        Display.overallFailure();
+        core.setFailed("A check run failed.");
+        return;
+      }
+
+      if (checkRuns.isOverallSuccess()) {
+        Display.overallSuccess();
+        return;
+      }
+
       Display.delaying(inputs.interval);
       await delay(inputs.interval);
-      continue;
     }
 
-    Display.relevantCheckRuns(checkRuns);
-
-    if (checkRuns.isOverallFailure()) {
-      Display.overallFailure();
-      core.setFailed("A check run failed.");
+    Display.timedOut();
+    core.setFailed("Timed out waiting on check runs to all be successful.");
+  } catch (error) {
+    if (error instanceof Error) {
+      core.setFailed(error);
       return;
+    } else {
+      throw error;
     }
-
-    if (checkRuns.isOverallSuccess()) {
-      Display.overallSuccess();
-      return;
-    }
-
-    Display.delaying(inputs.interval);
-    await delay(inputs.interval);
   }
-
-  Display.timedOut();
-  core.setFailed("Timed out waiting on check runs to all be successful.");
 };
 
 waitForCheckRuns();
