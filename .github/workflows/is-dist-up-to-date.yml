@@ -2,6 +2,7 @@ name: Verify built files are up to date
 on:
   pull_request:
   merge_group:
+  workflow_dispatch:
 
 permissions:
   contents: read
