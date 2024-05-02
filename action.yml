@@ -18,7 +18,7 @@ inputs:
   timeout:
     description: "The number of seconds before the job is declared a failure if check runs have not yet concluded."
     required: false
-    default: "300"
+    default: "600"
   name:
     description: "The name of the Sloth's own check run. This is used to ensure Sloth does not wait upon itself."
     required: false
