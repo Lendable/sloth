@@ -1,6 +1,6 @@
 import * as core from "@actions/core";
 import { delay } from "./delay";
-import { fetchCheckRuns } from "./fetch-check-runs";
+import { CheckRunFetcher } from "./fetch-check-runs";
 import { inputs } from "./inputs";
 import { Display } from "./display";
 
@@ -17,10 +17,17 @@ Display.ignoredCheckNames(inputs.ignored);
 
 const waitForCheckRuns = async (): Promise<void> => {
   try {
+    const checkRunFetcher = new CheckRunFetcher(
+      inputs.token,
+      inputs.ref,
+      inputs.name,
+      inputs.ignored,
+    );
+
     while (!shouldTimeOut()) {
       Display.startingIteration();
 
-      const checkRuns = await fetchCheckRuns();
+      const checkRuns = await checkRunFetcher.fetch();
 
       if (checkRuns.total() === 0) {
         Display.delaying(inputs.interval);

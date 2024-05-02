@@ -1,28 +1,42 @@
 import * as github from "@actions/github";
 import type { components } from "@octokit/openapi-types";
-import { inputs } from "./inputs";
 import { RelevantCheckRuns } from "./relevant-check-runs";
+import { GitHub } from "@actions/github/lib/utils";
 
 export type CheckRun = components["schemas"]["check-run"];
 
-const octokit = github.getOctokit(inputs.token);
+export class CheckRunFetcher {
+  private octokit: InstanceType<typeof GitHub> | null = null;
 
-export const fetchCheckRuns = async (): Promise<RelevantCheckRuns> => {
-  const iterator = octokit.paginate.iterator(octokit.rest.checks.listForRef, {
-    ...github.context.repo,
-    ref: inputs.ref,
-    per_page: 100,
-  });
+  constructor(
+    private token: string,
+    private ref: string,
+    private ownName: string,
+    private ignoredChecks: Set<string>,
+  ) {}
 
-  let runs: CheckRun[] = [];
+  async fetch(): Promise<RelevantCheckRuns> {
+    this.octokit ??= github.getOctokit(this.token);
 
-  for await (const { data } of iterator) {
-    runs = runs.concat(data);
+    const iterator = this.octokit.paginate.iterator(
+      this.octokit.rest.checks.listForRef,
+      {
+        ...github.context.repo,
+        ref: this.ref,
+        per_page: 100,
+      },
+    );
+
+    let runs: CheckRun[] = [];
+
+    for await (const { data } of iterator) {
+      runs = runs.concat(data);
+    }
+
+    return new RelevantCheckRuns(
+      runs.filter(
+        (run) => run.name !== this.ownName && !this.ignoredChecks.has(run.name),
+      ),
+    );
   }
-
-  return new RelevantCheckRuns(
-    runs.filter(
-      (run) => run.name !== inputs.name && !inputs.ignored.has(run.name),
-    ),
-  );
-};
+}
