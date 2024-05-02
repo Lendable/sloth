@@ -1,21 +1,33 @@
 import * as core from "@actions/core";
 import { delay } from "./delay";
 import { CheckRunFetcher } from "./fetch-check-runs";
-import { inputs } from "./inputs";
+import { Inputs } from "./inputs";
 import { Display } from "./display";
 
-const startTime = new Date();
+const run = async (): Promise<void> => {
+  const startTime = new Date();
+  let inputs: Inputs;
 
-const shouldTimeOut = (): boolean => {
-  const executionTime = Math.round(
-    (new Date().getTime() - startTime.getTime()) / 1000,
-  );
-  return executionTime > inputs.timeout;
-};
+  try {
+    inputs = new Inputs();
+  } catch (error) {
+    if (error instanceof Error) {
+      core.setFailed(error);
+      return;
+    } else {
+      throw error;
+    }
+  }
 
-Display.ignoredCheckNames(inputs.ignored);
+  const shouldTimeOut = (): boolean => {
+    const executionTime = Math.round(
+      (new Date().getTime() - startTime.getTime()) / 1000,
+    );
+    return executionTime > inputs.timeout;
+  };
 
-const waitForCheckRuns = async (): Promise<void> => {
+  Display.ignoredCheckNames(inputs.ignored);
+
   try {
     const checkRunFetcher = new CheckRunFetcher(
       inputs.token,
@@ -64,4 +76,4 @@ const waitForCheckRuns = async (): Promise<void> => {
   }
 };
 
-waitForCheckRuns();
+run();
