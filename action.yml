@@ -12,7 +12,7 @@ inputs:
     required: false
     default: ${{ github.event.pull_request.head.sha || github.sha }}
   interval:
-    description: "Interval in seconds between check of checks"
+    description: "The number of seconds in between polls of the GitHub API for check run conclusions."
     required: false
     default: "10"
   timeout:
