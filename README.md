@@ -37,7 +37,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Sloth
-        uses: lendable/sloth@0.1.2
+        uses: lendable/sloth@v0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 ```
