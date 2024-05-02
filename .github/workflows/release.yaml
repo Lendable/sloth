@@ -16,9 +16,17 @@ jobs:
     runs-on: ubuntu-22.04
     name: Release Automation
     steps:
+      - uses: tibdex/github-app-token@v2
+        id: generate-token
+        with:
+          app_id: ${{ secrets.LENDABOT_APP_ID }}
+          private_key: ${{ secrets.LENDABOT_APP_PRIVATE_KEY }}
+          repositories: [Lendable/sloth]
+
       - uses: google-github-actions/release-please-action@v4
         id: release
         with:
+          token: ${{ steps.generate-token.outputs.token }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
           include-component-in-tag: false
@@ -30,7 +38,7 @@ jobs:
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git remote add gh-token "https://${{ secrets.GITHUB_TOKEN }}@github.com/Lendable/sloth.git"
+          git remote add gh-token "https://${{ steps.generate-token.outputs.token }}@github.com/Lendable/sloth.git"
           git tag -d v${{ steps.release.outputs.major }} || true
           git tag -d v${{ steps.release.outputs.major }}.${{ steps.release.outputs.minor }} || true
           git push origin :v${{ steps.release.outputs.major }} || true
