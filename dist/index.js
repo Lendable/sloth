@@ -29316,24 +29316,36 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.fetchCheckRuns = void 0;
+exports.CheckRunFetcher = void 0;
 const github = __importStar(__nccwpck_require__(5438));
-const inputs_1 = __nccwpck_require__(7063);
 const relevant_check_runs_1 = __nccwpck_require__(3695);
-const octokit = github.getOctokit(inputs_1.inputs.token);
-const fetchCheckRuns = async () => {
-    const iterator = octokit.paginate.iterator(octokit.rest.checks.listForRef, {
-        ...github.context.repo,
-        ref: inputs_1.inputs.ref,
-        per_page: 100,
-    });
-    let runs = [];
-    for await (const { data } of iterator) {
-        runs = runs.concat(data);
+class CheckRunFetcher {
+    token;
+    ref;
+    ownName;
+    ignoredChecks;
+    octokit = null;
+    constructor(token, ref, ownName, ignoredChecks) {
+        this.token = token;
+        this.ref = ref;
+        this.ownName = ownName;
+        this.ignoredChecks = ignoredChecks;
     }
-    return new relevant_check_runs_1.RelevantCheckRuns(runs.filter((run) => run.name !== inputs_1.inputs.name && !inputs_1.inputs.ignored.has(run.name)));
-};
-exports.fetchCheckRuns = fetchCheckRuns;
+    async fetch() {
+        this.octokit ??= github.getOctokit(this.token);
+        const iterator = this.octokit.paginate.iterator(this.octokit.rest.checks.listForRef, {
+            ...github.context.repo,
+            ref: this.ref,
+            per_page: 100,
+        });
+        let runs = [];
+        for await (const { data } of iterator) {
+            runs = runs.concat(data);
+        }
+        return new relevant_check_runs_1.RelevantCheckRuns(runs.filter((run) => run.name !== this.ownName && !this.ignoredChecks.has(run.name)));
+    }
+}
+exports.CheckRunFetcher = CheckRunFetcher;
 
 
 /***/ }),
@@ -29380,9 +29392,10 @@ const shouldTimeOut = () => {
 display_1.Display.ignoredCheckNames(inputs_1.inputs.ignored);
 const waitForCheckRuns = async () => {
     try {
+        const checkRunFetcher = new fetch_check_runs_1.CheckRunFetcher(inputs_1.inputs.token, inputs_1.inputs.ref, inputs_1.inputs.name, inputs_1.inputs.ignored);
         while (!shouldTimeOut()) {
             display_1.Display.startingIteration();
-            const checkRuns = await (0, fetch_check_runs_1.fetchCheckRuns)();
+            const checkRuns = await checkRunFetcher.fetch();
             if (checkRuns.total() === 0) {
                 display_1.Display.delaying(inputs_1.inputs.interval);
                 await (0, delay_1.delay)(inputs_1.inputs.interval);
