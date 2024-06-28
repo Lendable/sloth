@@ -29194,11 +29194,10 @@ function wrappy (fn, cb) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.delay = void 0;
+exports.delay = delay;
 async function delay(secs) {
     return new Promise((resolve) => setTimeout(resolve, secs * 1000));
 }
-exports.delay = delay;
 
 
 /***/ }),
