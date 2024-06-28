@@ -1,26 +1,45 @@
 import * as core from "@actions/core";
 import { delay } from "./delay";
-import { fetchCheckRuns } from "./fetch-check-runs";
-import { inputs } from "./inputs";
+import { CheckRunFetcher } from "./fetch-check-runs";
+import { Inputs } from "./inputs";
 import { Display } from "./display";
 
-const startTime = new Date();
+const run = async (): Promise<void> => {
+  const startTime = new Date();
+  let inputs: Inputs;
 
-const shouldTimeOut = (): boolean => {
-  const executionTime = Math.round(
-    (new Date().getTime() - startTime.getTime()) / 1000,
-  );
-  return executionTime > inputs.timeout;
-};
-
-Display.ignoredCheckNames(inputs.ignored);
-
-const waitForCheckRuns = async (): Promise<void> => {
   try {
+    inputs = new Inputs();
+  } catch (error) {
+    if (error instanceof Error) {
+      core.setFailed(error);
+      return;
+    } else {
+      throw error;
+    }
+  }
+
+  const shouldTimeOut = (): boolean => {
+    const executionTime = Math.round(
+      (new Date().getTime() - startTime.getTime()) / 1000,
+    );
+    return executionTime > inputs.timeout;
+  };
+
+  Display.ignoredCheckNames(inputs.ignored);
+
+  try {
+    const checkRunFetcher = new CheckRunFetcher(
+      inputs.token,
+      inputs.ref,
+      inputs.name,
+      inputs.ignored,
+    );
+
     while (!shouldTimeOut()) {
       Display.startingIteration();
 
-      const checkRuns = await fetchCheckRuns();
+      const checkRuns = await checkRunFetcher.fetch();
 
       if (checkRuns.total() === 0) {
         Display.delaying(inputs.interval);
@@ -57,4 +76,4 @@ const waitForCheckRuns = async (): Promise<void> => {
   }
 };
 
-waitForCheckRuns();
+run();

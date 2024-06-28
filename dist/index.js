@@ -29316,24 +29316,36 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.fetchCheckRuns = void 0;
+exports.CheckRunFetcher = void 0;
 const github = __importStar(__nccwpck_require__(5438));
-const inputs_1 = __nccwpck_require__(7063);
 const relevant_check_runs_1 = __nccwpck_require__(3695);
-const octokit = github.getOctokit(inputs_1.inputs.token);
-const fetchCheckRuns = async () => {
-    const iterator = octokit.paginate.iterator(octokit.rest.checks.listForRef, {
-        ...github.context.repo,
-        ref: inputs_1.inputs.ref,
-        per_page: 100,
-    });
-    let runs = [];
-    for await (const { data } of iterator) {
-        runs = runs.concat(data);
+class CheckRunFetcher {
+    token;
+    ref;
+    ownName;
+    ignoredChecks;
+    octokit = null;
+    constructor(token, ref, ownName, ignoredChecks) {
+        this.token = token;
+        this.ref = ref;
+        this.ownName = ownName;
+        this.ignoredChecks = ignoredChecks;
     }
-    return new relevant_check_runs_1.RelevantCheckRuns(runs.filter((run) => run.name !== inputs_1.inputs.name && !inputs_1.inputs.ignored.has(run.name)));
-};
-exports.fetchCheckRuns = fetchCheckRuns;
+    async fetch() {
+        this.octokit ??= github.getOctokit(this.token);
+        const iterator = this.octokit.paginate.iterator(this.octokit.rest.checks.listForRef, {
+            ...github.context.repo,
+            ref: this.ref,
+            per_page: 100,
+        });
+        let runs = [];
+        for await (const { data } of iterator) {
+            runs = runs.concat(data);
+        }
+        return new relevant_check_runs_1.RelevantCheckRuns(runs.filter((run) => run.name !== this.ownName && !this.ignoredChecks.has(run.name)));
+    }
+}
+exports.CheckRunFetcher = CheckRunFetcher;
 
 
 /***/ }),
@@ -29372,20 +29384,34 @@ const delay_1 = __nccwpck_require__(653);
 const fetch_check_runs_1 = __nccwpck_require__(8896);
 const inputs_1 = __nccwpck_require__(7063);
 const display_1 = __nccwpck_require__(9517);
-const startTime = new Date();
-const shouldTimeOut = () => {
-    const executionTime = Math.round((new Date().getTime() - startTime.getTime()) / 1000);
-    return executionTime > inputs_1.inputs.timeout;
-};
-display_1.Display.ignoredCheckNames(inputs_1.inputs.ignored);
-const waitForCheckRuns = async () => {
+const run = async () => {
+    const startTime = new Date();
+    let inputs;
     try {
+        inputs = new inputs_1.Inputs();
+    }
+    catch (error) {
+        if (error instanceof Error) {
+            core.setFailed(error);
+            return;
+        }
+        else {
+            throw error;
+        }
+    }
+    const shouldTimeOut = () => {
+        const executionTime = Math.round((new Date().getTime() - startTime.getTime()) / 1000);
+        return executionTime > inputs.timeout;
+    };
+    display_1.Display.ignoredCheckNames(inputs.ignored);
+    try {
+        const checkRunFetcher = new fetch_check_runs_1.CheckRunFetcher(inputs.token, inputs.ref, inputs.name, inputs.ignored);
         while (!shouldTimeOut()) {
             display_1.Display.startingIteration();
-            const checkRuns = await (0, fetch_check_runs_1.fetchCheckRuns)();
+            const checkRuns = await checkRunFetcher.fetch();
             if (checkRuns.total() === 0) {
-                display_1.Display.delaying(inputs_1.inputs.interval);
-                await (0, delay_1.delay)(inputs_1.inputs.interval);
+                display_1.Display.delaying(inputs.interval);
+                await (0, delay_1.delay)(inputs.interval);
                 continue;
             }
             display_1.Display.relevantCheckRuns(checkRuns);
@@ -29398,8 +29424,8 @@ const waitForCheckRuns = async () => {
                 display_1.Display.overallSuccess();
                 return;
             }
-            display_1.Display.delaying(inputs_1.inputs.interval);
-            await (0, delay_1.delay)(inputs_1.inputs.interval);
+            display_1.Display.delaying(inputs.interval);
+            await (0, delay_1.delay)(inputs.interval);
         }
         display_1.Display.timedOut();
         core.setFailed("Timed out waiting on check runs to all be successful.");
@@ -29414,7 +29440,7 @@ const waitForCheckRuns = async () => {
         }
     }
 };
-waitForCheckRuns();
+run();
 
 
 /***/ }),
@@ -29448,30 +29474,39 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.inputs = void 0;
+exports.Inputs = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const interval = Number(core.getInput("interval"));
-if (!Number.isInteger(interval)) {
-    throw new Error("Invalid interval");
+class Inputs {
+    token;
+    name;
+    interval;
+    timeout;
+    ref;
+    ignored;
+    constructor() {
+        if (!Number.isInteger(interval)) {
+            throw new Error("Invalid interval");
+        }
+        if (interval < 1) {
+            throw new Error("Interval must be greater than 0");
+        }
+        const timeout = Number(core.getInput("timeout"));
+        if (!Number.isInteger(timeout)) {
+            throw new Error("Invalid timeout");
+        }
+        if (timeout < 1) {
+            throw new Error("Timeout must be greater than 0");
+        }
+        this.token = core.getInput("token", { required: true });
+        this.name = core.getInput("name");
+        this.interval = interval;
+        this.timeout = timeout;
+        this.ref = core.getInput("ref");
+        this.ignored = new Set(core.getMultilineInput("ignored"));
+    }
 }
-if (interval < 1) {
-    throw new Error("Interval must be greater than 0");
-}
-const timeout = Number(core.getInput("timeout"));
-if (!Number.isInteger(timeout)) {
-    throw new Error("Invalid timeout");
-}
-if (timeout < 1) {
-    throw new Error("Timeout must be greater than 0");
-}
-exports.inputs = {
-    token: core.getInput("token", { required: true }),
-    name: core.getInput("name"),
-    interval,
-    timeout,
-    ref: core.getInput("ref"),
-    ignored: new Set(core.getMultilineInput("ignored")),
-};
+exports.Inputs = Inputs;
 
 
 /***/ }),
