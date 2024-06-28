@@ -22,5 +22,3 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           commitlintRulesPath: ".github/commitlint.config.js"
-          commitTitleMatch: "false"
-          ignoreCommits: "true"
