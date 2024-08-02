@@ -7,7 +7,7 @@ inputs:
   token:
     description: "GitHub token to use to interact with the GitHub API."
     default: "${{ github.token }}"
-    required: true
+    required: false
   ref:
     description: "Git reference to inspect check runs for. The default supports Pull Requests, Merge Queues as well as branch pushes."
     required: false
