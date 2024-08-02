@@ -32,6 +32,10 @@ on:
   pull_request:
   merge_group:
 
+permissions:
+  contents: read
+  checks: read
+
 jobs:
   sloth:
     runs-on: ubuntu-22.04
