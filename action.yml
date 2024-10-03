@@ -6,7 +6,8 @@ branding:
 inputs:
   token:
     description: "GitHub token to use to interact with the GitHub API."
-    required: true
+    default: "${{ github.token }}"
+    required: false
   ref:
     description: "Git reference to inspect check runs for. The default supports Pull Requests, Merge Queues as well as branch pushes."
     required: false
