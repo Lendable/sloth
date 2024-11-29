@@ -4,8 +4,9 @@ import { inputs } from "./inputs";
 import { RelevantCheckRuns } from "./relevant-check-runs";
 
 export type CheckRun = components["schemas"]["check-run"];
+import { retry } from "@octokit/plugin-retry";
 
-const octokit = github.getOctokit(inputs.token);
+const octokit = github.getOctokit(inputs.token, undefined, retry);
 
 export const fetchCheckRuns = async (): Promise<RelevantCheckRuns> => {
   const iterator = octokit.paginate.iterator(octokit.rest.checks.listForRef, {
