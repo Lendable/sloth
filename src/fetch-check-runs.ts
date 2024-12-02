@@ -2,9 +2,8 @@ import * as github from "@actions/github";
 import type { components } from "@octokit/openapi-types";
 import { inputs } from "./inputs";
 import { RelevantCheckRuns } from "./relevant-check-runs";
-
-export type CheckRun = components["schemas"]["check-run"];
 import { retry } from "@octokit/plugin-retry";
+export type CheckRun = components["schemas"]["check-run"];
 
 const octokit = github.getOctokit(inputs.token, undefined, retry);
 
