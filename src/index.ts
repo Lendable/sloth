@@ -1,8 +1,8 @@
 import * as core from "@actions/core";
-import { delay } from "./delay.js";
-import { fetchCheckRuns } from "./fetch-check-runs.js";
-import { inputs } from "./inputs.js";
-import { Display } from "./display.js";
+import { delay } from "./delay";
+import { fetchCheckRuns } from "./fetch-check-runs";
+import { inputs } from "./inputs";
+import { Display } from "./display";
 
 const startTime = new Date();
 

@@ -1,6 +1,6 @@
 import * as core from "@actions/core";
-import { RelevantCheckRuns } from "./relevant-check-runs.js";
-import { CheckRun } from "./fetch-check-runs.js";
+import { RelevantCheckRuns } from "./relevant-check-runs";
+import { CheckRun } from "./fetch-check-runs";
 
 const colors = {
   reset: "\x1b[0m",

@@ -1,4 +1,4 @@
-import { CheckRun } from "./fetch-check-runs.js";
+import { CheckRun } from "./fetch-check-runs";
 
 const failureConclusions = ["failure", "cancelled", "timed_out"];
 

@@ -1,7 +1,7 @@
 import * as github from "@actions/github";
 import type { components } from "@octokit/openapi-types";
-import { inputs } from "./inputs.js";
-import { RelevantCheckRuns } from "./relevant-check-runs.js";
+import { inputs } from "./inputs";
+import { RelevantCheckRuns } from "./relevant-check-runs";
 
 export type CheckRun = components["schemas"]["check-run"];
 
