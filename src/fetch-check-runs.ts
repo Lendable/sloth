@@ -1,9 +1,10 @@
 import * as github from "@actions/github";
-import type { components } from "@octokit/openapi-types";
 import { inputs } from "./inputs";
 import { RelevantCheckRuns } from "./relevant-check-runs";
+import type { PaginatingEndpoints } from "@octokit/plugin-paginate-rest/dist-types/types";
 
-export type CheckRun = components["schemas"]["check-run"];
+export type CheckRun =
+  PaginatingEndpoints["GET /repos/{owner}/{repo}/commits/{ref}/check-runs"]["response"]["data"][number];
 
 const octokit = github.getOctokit(inputs.token);
 
