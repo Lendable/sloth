@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/Lendable/sloth/compare/0.2.0...0.2.1) (2025-06-13)
+
+
+### Bug Fixes
+
+* **deps:** Update dependency @actions/core to v1.11.1 ([#90](https://github.com/Lendable/sloth/issues/90)) ([75b9566](https://github.com/Lendable/sloth/commit/75b956615dbc51d7851573ed0c8032c20f69b6b5))
+
 ## [0.2.0](https://github.com/Lendable/sloth/compare/0.1.3...0.2.0) (2024-05-02)
 
 
