@@ -30088,7 +30088,8 @@ const fetchCheckRuns = async () => {
             else {
                 const runTime = run.completed_at || run.started_at;
                 const existingTime = existing.completed_at || existing.started_at;
-                if (runTime && (!existingTime || runTime > existingTime)) {
+                if ((runTime && (!existingTime || runTime > existingTime)) ||
+                    !runTime) {
                     latestRunsByName.set(run.name, run);
                 }
             }
