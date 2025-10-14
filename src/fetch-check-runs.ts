@@ -22,6 +22,10 @@ export const fetchCheckRuns = async (): Promise<RelevantCheckRuns> => {
 
   for await (const { data } of iterator) {
     for (const run of data) {
+      if (run.name === inputs.name || inputs.ignored.has(run.name)) {
+        continue;
+      }
+
       const existing = latestRunsByName.get(run.name);
 
       if (!existing) {
@@ -37,9 +41,5 @@ export const fetchCheckRuns = async (): Promise<RelevantCheckRuns> => {
     }
   }
 
-  return new RelevantCheckRuns(
-    Array.from(latestRunsByName.values()).filter(
-      (run) => run.name !== inputs.name && !inputs.ignored.has(run.name),
-    ),
-  );
+  return new RelevantCheckRuns(Array.from(latestRunsByName.values()));
 };
