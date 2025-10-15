@@ -30072,11 +30072,30 @@ const fetchCheckRuns = async () => {
         ref: inputs_1.inputs.ref,
         per_page: 100,
     });
-    let runs = [];
+    // Deduplicate check runs by name, keeping only the most recent one for each name.
+    // This is necessary because the GitHub API can return multiple runs for the same check
+    // (e.g., when a check is re-run), even with filter: "latest".
+    const latestRunsByName = new Map();
     for await (const { data } of iterator) {
-        runs = runs.concat(data);
+        for (const run of data) {
+            if (run.name === inputs_1.inputs.name || inputs_1.inputs.ignored.has(run.name)) {
+                continue;
+            }
+            const existing = latestRunsByName.get(run.name);
+            if (!existing) {
+                latestRunsByName.set(run.name, run);
+            }
+            else {
+                const runTime = run.completed_at || run.started_at;
+                const existingTime = existing.completed_at || existing.started_at;
+                if ((runTime && (!existingTime || runTime > existingTime)) ||
+                    !runTime) {
+                    latestRunsByName.set(run.name, run);
+                }
+            }
+        }
     }
-    return new relevant_check_runs_1.RelevantCheckRuns(runs.filter((run) => run.name !== inputs_1.inputs.name && !inputs_1.inputs.ignored.has(run.name)));
+    return new relevant_check_runs_1.RelevantCheckRuns(Array.from(latestRunsByName.values()));
 };
 exports.fetchCheckRuns = fetchCheckRuns;
 
