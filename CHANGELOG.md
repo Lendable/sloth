@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/Lendable/sloth/compare/0.2.1...0.2.2) (2025-10-15)
+
+
+### Bug Fixes
+
+* Filter out older restarted actions ([#118](https://github.com/Lendable/sloth/issues/118)) ([8d1d319](https://github.com/Lendable/sloth/commit/8d1d319215b60b0c4324f8adc6fd7cc3b26be9c4))
+
 ## [0.2.1](https://github.com/Lendable/sloth/compare/0.2.0...0.2.1) (2025-06-13)
 
 
