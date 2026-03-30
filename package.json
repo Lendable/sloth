@@ -6,12 +6,14 @@
     ".": "./dist/index.js"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "license": "MIT",
   "scripts": {
     "bundle": "npx ncc build src/index.ts -o dist --source-map --license licenses.txt",
-    "lint": "npx eslint . -c .eslintrc.yml"
+    "lint": "npx eslint . -c .eslintrc.yml",
+    "test": "npx vitest run",
+    "test:watch": "npx vitest"
   },
   "dependencies": {
     "@actions/core": "^1.10.1",
@@ -25,6 +27,7 @@
     "eslint": "^8.57.0",
     "eslint-plugin-github": "^4.10.2",
     "eslint-plugin-jsonc": "^2.15.1",
-    "typescript": "^5.4.5"
+    "typescript": "^5.4.5",
+    "vitest": "^4.1.2"
   }
 }

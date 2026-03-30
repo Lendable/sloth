@@ -1882,6 +1882,7 @@ class Context {
         this.action = process.env.GITHUB_ACTION;
         this.actor = process.env.GITHUB_ACTOR;
         this.job = process.env.GITHUB_JOB;
+        this.runAttempt = parseInt(process.env.GITHUB_RUN_ATTEMPT, 10);
         this.runNumber = parseInt(process.env.GITHUB_RUN_NUMBER, 10);
         this.runId = parseInt(process.env.GITHUB_RUN_ID, 10);
         this.apiUrl = (_a = process.env.GITHUB_API_URL) !== null && _a !== void 0 ? _a : `https://api.github.com`;
@@ -3569,13 +3570,28 @@ var import_graphql = __nccwpck_require__(7);
 var import_auth_token = __nccwpck_require__(7864);
 
 // pkg/dist-src/version.js
-var VERSION = "5.2.1";
+var VERSION = "5.2.2";
 
 // pkg/dist-src/index.js
 var noop = () => {
 };
 var consoleWarn = console.warn.bind(console);
 var consoleError = console.error.bind(console);
+function createLogger(logger = {}) {
+  if (typeof logger.debug !== "function") {
+    logger.debug = noop;
+  }
+  if (typeof logger.info !== "function") {
+    logger.info = noop;
+  }
+  if (typeof logger.warn !== "function") {
+    logger.warn = consoleWarn;
+  }
+  if (typeof logger.error !== "function") {
+    logger.error = consoleError;
+  }
+  return logger;
+}
 var userAgentTrail = `octokit-core.js/${VERSION} ${(0, import_universal_user_agent.getUserAgent)()}`;
 var Octokit = class {
   static {
@@ -3649,15 +3665,7 @@ var Octokit = class {
     }
     this.request = import_request.request.defaults(requestDefaults);
     this.graphql = (0, import_graphql.withCustomRequest)(this.request).defaults(requestDefaults);
-    this.log = Object.assign(
-      {
-        debug: noop,
-        info: noop,
-        warn: consoleWarn,
-        error: consoleError
-      },
-      options.log
-    );
+    this.log = createLogger(options.log);
     this.hook = hook;
     if (!options.authStrategy) {
       if (!options.auth) {
@@ -30007,9 +30015,9 @@ exports.Display = {
     startingIteration: () => {
         console.info("");
     },
-    ignoredCheckNames: (ignoredCheckNames) => {
-        if (ignoredCheckNames.size > 0) {
-            logAsGroup("Ignored check names", [...ignoredCheckNames]);
+    ignoredCheckPatterns: (patterns) => {
+        if (patterns.length > 0) {
+            logAsGroup("Ignored check patterns", patterns);
         }
     },
     relevantCheckRuns: (checkRuns) => {
@@ -30078,7 +30086,7 @@ const fetchCheckRuns = async () => {
     const latestRunsByName = new Map();
     for await (const { data } of iterator) {
         for (const run of data) {
-            if (run.name === inputs_1.inputs.name || inputs_1.inputs.ignored.has(run.name)) {
+            if (run.name === inputs_1.inputs.name || inputs_1.inputs.ignored.matches(run.name)) {
                 continue;
             }
             const existing = latestRunsByName.get(run.name);
@@ -30098,6 +30106,67 @@ const fetchCheckRuns = async () => {
     return new relevant_check_runs_1.RelevantCheckRuns(Array.from(latestRunsByName.values()));
 };
 exports.fetchCheckRuns = fetchCheckRuns;
+
+
+/***/ }),
+
+/***/ 1010:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.IgnoreMatcher = void 0;
+/**
+ * Converts glob-style ignore patterns into an efficient check-run name matcher.
+ *
+ * Patterns containing `*` are treated as wildcards (matching any sequence of
+ * characters). Patterns without wildcards are matched exactly. All comparisons
+ * are case-sensitive.
+ */
+class IgnoreMatcher {
+    exactNames;
+    wildcardPatterns;
+    constructor(patterns) {
+        this.exactNames = new Set();
+        this.wildcardPatterns = [];
+        for (const pattern of patterns) {
+            if (pattern.includes("*")) {
+                this.wildcardPatterns.push({
+                    source: pattern,
+                    regex: toRegex(pattern),
+                });
+            }
+            else {
+                this.exactNames.add(pattern);
+            }
+        }
+    }
+    /** Returns true if the given check run name matches any ignored pattern. */
+    matches(name) {
+        if (this.exactNames.has(name)) {
+            return true;
+        }
+        return this.wildcardPatterns.some(({ regex }) => regex.test(name));
+    }
+    /** Returns the raw patterns for display/logging purposes. */
+    get patterns() {
+        return [
+            ...this.exactNames,
+            ...this.wildcardPatterns.map(({ source }) => source),
+        ];
+    }
+    get size() {
+        return this.exactNames.size + this.wildcardPatterns.length;
+    }
+}
+exports.IgnoreMatcher = IgnoreMatcher;
+/** Escapes regex special characters except `*`, then replaces `*` with `.*`. */
+function toRegex(pattern) {
+    const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, "\\$&");
+    const regexStr = escaped.replace(/\*/g, ".*");
+    return new RegExp(`^${regexStr}$`);
+}
 
 
 /***/ }),
@@ -30151,7 +30220,7 @@ const shouldTimeOut = () => {
     const executionTime = Math.round((new Date().getTime() - startTime.getTime()) / 1000);
     return executionTime > inputs_1.inputs.timeout;
 };
-display_1.Display.ignoredCheckNames(inputs_1.inputs.ignored);
+display_1.Display.ignoredCheckPatterns(inputs_1.inputs.ignored.patterns);
 const waitForCheckRuns = async () => {
     try {
         while (!shouldTimeOut()) {
@@ -30234,6 +30303,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.inputs = void 0;
 const core = __importStar(__nccwpck_require__(7484));
+const ignore_matcher_1 = __nccwpck_require__(1010);
 const interval = Number(core.getInput("interval"));
 if (!Number.isInteger(interval)) {
     throw new Error("Invalid interval");
@@ -30254,7 +30324,7 @@ exports.inputs = {
     interval,
     timeout,
     ref: core.getInput("ref"),
-    ignored: new Set(core.getMultilineInput("ignored")),
+    ignored: new ignore_matcher_1.IgnoreMatcher(core.getMultilineInput("ignored")),
 };
 
 

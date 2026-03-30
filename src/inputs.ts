@@ -1,4 +1,5 @@
 import * as core from "@actions/core";
+import { IgnoreMatcher } from "./ignore-matcher";
 
 const interval = Number(core.getInput("interval"));
 
@@ -26,5 +27,5 @@ export const inputs = {
   interval,
   timeout,
   ref: core.getInput("ref"),
-  ignored: new Set(core.getMultilineInput("ignored")),
+  ignored: new IgnoreMatcher(core.getMultilineInput("ignored")),
 } as const;
