@@ -54,9 +54,9 @@ export const Display = {
     console.info("");
   },
 
-  ignoredCheckNames: (ignoredCheckNames: Set<string>) => {
-    if (ignoredCheckNames.size > 0) {
-      logAsGroup("Ignored check names", [...ignoredCheckNames]);
+  ignoredCheckPatterns: (patterns: string[]) => {
+    if (patterns.length > 0) {
+      logAsGroup("Ignored check patterns", patterns);
     }
   },
 

@@ -22,7 +22,7 @@ export const fetchCheckRuns = async (): Promise<RelevantCheckRuns> => {
 
   for await (const { data } of iterator) {
     for (const run of data) {
-      if (run.name === inputs.name || inputs.ignored.has(run.name)) {
+      if (run.name === inputs.name || inputs.ignored.matches(run.name)) {
         continue;
       }
 
