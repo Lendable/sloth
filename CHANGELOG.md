@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.0](https://github.com/Lendable/sloth/compare/0.2.2...1.0.0) (2026-03-30)
+
+
+### ⚠ BREAKING CHANGES
+
+* default node version bumped to v24
+
+### Features
+
+* Enhance ignored checks to support wildcard patterns ([#128](https://github.com/Lendable/sloth/issues/128)) ([7428b53](https://github.com/Lendable/sloth/commit/7428b53ec0e9f9b44883a530775fe67c62ed3e81))
+
 ## [0.2.2](https://github.com/Lendable/sloth/compare/0.2.1...0.2.2) (2025-10-15)
 
 
