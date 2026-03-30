@@ -5,7 +5,7 @@
 
 ### ⚠ BREAKING CHANGES
 
-* enhance ignored checks to support wildcard patterns ([#128](https://github.com/Lendable/sloth/issues/128))
+* default node version bumped to v24
 
 ### Features
 
