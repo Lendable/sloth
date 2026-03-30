@@ -25,9 +25,9 @@ inputs:
     required: false
     default: "sloth"
   ignored:
-    description: "A multi-line list of check run names to ignore when determining an overall result."
+    description: "A multi-line list of check run names or glob patterns to ignore when determining an overall result. Use * as a wildcard to match any sequence of characters (e.g. 'deploy-*-staging')."
     required: false
     default: ""
 runs:
-  using: node20
+  using: node24
   main: dist/index.js

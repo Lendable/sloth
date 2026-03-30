@@ -13,7 +13,7 @@ const shouldTimeOut = (): boolean => {
   return executionTime > inputs.timeout;
 };
 
-Display.ignoredCheckNames(inputs.ignored);
+Display.ignoredCheckPatterns(inputs.ignored.patterns);
 
 const waitForCheckRuns = async (): Promise<void> => {
   try {
