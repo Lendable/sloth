@@ -30012,6 +30012,10 @@ exports.Display = {
         console.info("");
         console.info(`🚀 ${colors.green}Success!${colors.reset}`);
     },
+    emptySuccess: () => {
+        console.info("");
+        console.info(`🚀 ${colors.green}No check runs found after settle period — allow-empty is enabled, passing.${colors.reset}`);
+    },
     startingIteration: () => {
         console.info("");
     },
@@ -30221,12 +30225,17 @@ const shouldTimeOut = () => {
     return executionTime > inputs_1.inputs.timeout;
 };
 display_1.Display.ignoredCheckPatterns(inputs_1.inputs.ignored.patterns);
+const elapsedSeconds = () => Math.round((new Date().getTime() - startTime.getTime()) / 1000);
 const waitForCheckRuns = async () => {
     try {
         while (!shouldTimeOut()) {
             display_1.Display.startingIteration();
             const checkRuns = await (0, fetch_check_runs_1.fetchCheckRuns)();
             if (checkRuns.total() === 0) {
+                if (inputs_1.inputs.allowEmpty && elapsedSeconds() >= inputs_1.inputs.emptySettleTime) {
+                    display_1.Display.emptySuccess();
+                    return;
+                }
                 display_1.Display.delaying(inputs_1.inputs.interval);
                 await (0, delay_1.delay)(inputs_1.inputs.interval);
                 continue;
@@ -30318,6 +30327,13 @@ if (!Number.isInteger(timeout)) {
 if (timeout < 1) {
     throw new Error("Timeout must be greater than 0");
 }
+const emptySettleTime = Number(core.getInput("empty-settle-time"));
+if (!Number.isInteger(emptySettleTime)) {
+    throw new Error("Invalid empty-settle-time");
+}
+if (emptySettleTime < 0) {
+    throw new Error("empty-settle-time must be 0 or greater");
+}
 exports.inputs = {
     token: core.getInput("token", { required: true }),
     name: core.getInput("name"),
@@ -30325,6 +30341,8 @@ exports.inputs = {
     timeout,
     ref: core.getInput("ref"),
     ignored: new ignore_matcher_1.IgnoreMatcher(core.getMultilineInput("ignored")),
+    allowEmpty: core.getBooleanInput("allow-empty"),
+    emptySettleTime,
 };
 
 

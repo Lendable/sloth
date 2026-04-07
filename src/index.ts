@@ -15,6 +15,9 @@ const shouldTimeOut = (): boolean => {
 
 Display.ignoredCheckPatterns(inputs.ignored.patterns);
 
+const elapsedSeconds = (): number =>
+  Math.round((new Date().getTime() - startTime.getTime()) / 1000);
+
 const waitForCheckRuns = async (): Promise<void> => {
   try {
     while (!shouldTimeOut()) {
@@ -23,6 +26,11 @@ const waitForCheckRuns = async (): Promise<void> => {
       const checkRuns = await fetchCheckRuns();
 
       if (checkRuns.total() === 0) {
+        if (inputs.allowEmpty && elapsedSeconds() >= inputs.emptySettleTime) {
+          Display.emptySuccess();
+          return;
+        }
+
         Display.delaying(inputs.interval);
         await delay(inputs.interval);
         continue;

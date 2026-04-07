@@ -50,6 +50,13 @@ export const Display = {
     console.info(`🚀 ${colors.green}Success!${colors.reset}`);
   },
 
+  emptySuccess: () => {
+    console.info("");
+    console.info(
+      `🚀 ${colors.green}No check runs found after settle period — allow-empty is enabled, passing.${colors.reset}`,
+    );
+  },
+
   startingIteration: () => {
     console.info("");
   },

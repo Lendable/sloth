@@ -28,6 +28,14 @@ inputs:
     description: "A multi-line list of check run names or glob patterns to ignore when determining an overall result. Use * as a wildcard to match any sequence of characters (e.g. 'deploy-*-staging')."
     required: false
     default: ""
+  allow-empty:
+    description: "When true, Sloth succeeds if no other check runs are found after waiting for the settle period (see empty-settle-time). Useful when path-filtered workflows may not trigger on every PR. When false (default), Sloth waits until at least one check run appears or times out."
+    required: false
+    default: "false"
+  empty-settle-time:
+    description: "The number of seconds to wait before accepting an empty result when allow-empty is true. This grace period ensures workflows have time to be scheduled before Sloth concludes no checks will run."
+    required: false
+    default: "30"
 runs:
   using: node24
   main: dist/index.js
