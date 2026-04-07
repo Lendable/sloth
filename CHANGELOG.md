@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/Lendable/sloth/compare/1.0.0...1.1.0) (2026-04-07)
+
+
+### Features
+
+* Add allow-empty option for path-filtered workflow support ([#131](https://github.com/Lendable/sloth/issues/131)) ([caf95c6](https://github.com/Lendable/sloth/commit/caf95c69c1f2288f768180938b4c9d6659176d76))
+
 ## [1.0.0](https://github.com/Lendable/sloth/compare/0.2.2...1.0.0) (2026-03-30)
 
 
