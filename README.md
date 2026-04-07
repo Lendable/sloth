@@ -56,6 +56,8 @@ jobs:
 | `timeout`  | The number of seconds before the job is declared a failure if check runs have not yet concluded.                                       | No       | `600`                                                       |
 | `name`     | The name of Sloth's own check run. This is used to ensure Sloth does not wait upon itself.                                             | No       | `"sloth"`                                                   |
 | `ignored`  | A multi-line list of check run names or glob patterns to ignore when determining an overall result. Supports `*` wildcard.             | No       | `""`                                                        |
+| `allow-empty` | When `true`, Sloth succeeds if no check runs appear after the settle period. Useful when path-filtered workflows may not trigger.    | No       | `"false"`                                                   |
+| `empty-settle-time` | Seconds to wait before accepting an empty result when `allow-empty` is true. Ensures workflows have time to be scheduled.      | No       | `30`                                                        |
 
 ## Ignoring Checks
 
@@ -77,3 +79,18 @@ ignored: |
 ```
 
 This is particularly useful for dynamic matrix jobs where check run names are generated at runtime and cannot be enumerated upfront. For example, skipping optional deployment or smoke-test checks from a dynamic CI matrix while still gating on the required checks.
+
+## Allow Empty
+
+When Sloth runs alongside path-filtered workflows, some PRs may not trigger any other checks (e.g. documentation-only changes). By default, Sloth waits for at least one check to appear and will eventually time out if none do.
+
+Set `allow-empty: "true"` to let Sloth succeed when no other checks are found. To avoid a race condition where Sloth passes before other workflows have had time to be scheduled, Sloth waits for `empty-settle-time` seconds (default 30) before accepting an empty result. If any check appears during the settle period, Sloth resumes normal behaviour and waits for it to conclude.
+
+```yaml
+- name: Sloth
+  uses: lendable/sloth@v0
+  with:
+    token: ${{ secrets.GITHUB_TOKEN }}
+    allow-empty: "true"
+    empty-settle-time: "30"
+```

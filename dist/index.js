@@ -30012,6 +30012,10 @@ exports.Display = {
         console.info("");
         console.info(`🚀 ${colors.green}Success!${colors.reset}`);
     },
+    emptySuccess: () => {
+        console.info("");
+        console.info(`🚀 ${colors.green}No check runs found after settle period — allow-empty is enabled, passing.${colors.reset}`);
+    },
     startingIteration: () => {
         console.info("");
     },
@@ -30215,49 +30219,46 @@ const delay_1 = __nccwpck_require__(6252);
 const fetch_check_runs_1 = __nccwpck_require__(1833);
 const inputs_1 = __nccwpck_require__(8422);
 const display_1 = __nccwpck_require__(4857);
+const wait_for_check_runs_1 = __nccwpck_require__(7808);
 const startTime = new Date();
-const shouldTimeOut = () => {
-    const executionTime = Math.round((new Date().getTime() - startTime.getTime()) / 1000);
-    return executionTime > inputs_1.inputs.timeout;
-};
 display_1.Display.ignoredCheckPatterns(inputs_1.inputs.ignored.patterns);
-const waitForCheckRuns = async () => {
+const elapsedSeconds = () => Math.round((new Date().getTime() - startTime.getTime()) / 1000);
+const run = async () => {
     try {
-        while (!shouldTimeOut()) {
-            display_1.Display.startingIteration();
-            const checkRuns = await (0, fetch_check_runs_1.fetchCheckRuns)();
-            if (checkRuns.total() === 0) {
-                display_1.Display.delaying(inputs_1.inputs.interval);
-                await (0, delay_1.delay)(inputs_1.inputs.interval);
-                continue;
-            }
-            display_1.Display.relevantCheckRuns(checkRuns);
-            if (checkRuns.isOverallFailure()) {
+        await (0, wait_for_check_runs_1.waitForCheckRuns)({
+            fetchCheckRuns: fetch_check_runs_1.fetchCheckRuns,
+            delay: delay_1.delay,
+            elapsedSeconds,
+            onSuccess: display_1.Display.overallSuccess,
+            onEmptySuccess: display_1.Display.emptySuccess,
+            onFailure: (message) => {
                 display_1.Display.overallFailure();
-                core.setFailed("A check run failed.");
-                return;
-            }
-            if (checkRuns.isOverallSuccess()) {
-                display_1.Display.overallSuccess();
-                return;
-            }
-            display_1.Display.delaying(inputs_1.inputs.interval);
-            await (0, delay_1.delay)(inputs_1.inputs.interval);
-        }
-        display_1.Display.timedOut();
-        core.setFailed("Timed out waiting on check runs to all be successful.");
+                core.setFailed(message);
+            },
+            onTimeout: (message) => {
+                display_1.Display.timedOut();
+                core.setFailed(message);
+            },
+            onDelaying: display_1.Display.delaying,
+            onIterationStart: display_1.Display.startingIteration,
+            onDisplayCheckRuns: display_1.Display.relevantCheckRuns,
+        }, {
+            interval: inputs_1.inputs.interval,
+            timeout: inputs_1.inputs.timeout,
+            allowEmpty: inputs_1.inputs.allowEmpty,
+            emptySettleTime: inputs_1.inputs.emptySettleTime,
+        });
     }
     catch (error) {
         if (error instanceof Error) {
             core.setFailed(error);
-            return;
         }
         else {
             throw error;
         }
     }
 };
-waitForCheckRuns();
+run();
 
 
 /***/ }),
@@ -30318,6 +30319,13 @@ if (!Number.isInteger(timeout)) {
 if (timeout < 1) {
     throw new Error("Timeout must be greater than 0");
 }
+const emptySettleTime = Number(core.getInput("empty-settle-time"));
+if (!Number.isInteger(emptySettleTime)) {
+    throw new Error("Invalid empty-settle-time");
+}
+if (emptySettleTime < 0) {
+    throw new Error("empty-settle-time must be 0 or greater");
+}
 exports.inputs = {
     token: core.getInput("token", { required: true }),
     name: core.getInput("name"),
@@ -30325,6 +30333,8 @@ exports.inputs = {
     timeout,
     ref: core.getInput("ref"),
     ignored: new ignore_matcher_1.IgnoreMatcher(core.getMultilineInput("ignored")),
+    allowEmpty: core.getBooleanInput("allow-empty"),
+    emptySettleTime,
 };
 
 
@@ -30371,6 +30381,44 @@ class RelevantCheckRuns {
     }
 }
 exports.RelevantCheckRuns = RelevantCheckRuns;
+
+
+/***/ }),
+
+/***/ 7808:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.waitForCheckRuns = waitForCheckRuns;
+async function waitForCheckRuns(deps, opts) {
+    while (deps.elapsedSeconds() <= opts.timeout) {
+        deps.onIterationStart();
+        const checkRuns = await deps.fetchCheckRuns();
+        if (checkRuns.total() === 0) {
+            if (opts.allowEmpty && deps.elapsedSeconds() >= opts.emptySettleTime) {
+                deps.onEmptySuccess();
+                return;
+            }
+            deps.onDelaying(opts.interval);
+            await deps.delay(opts.interval);
+            continue;
+        }
+        deps.onDisplayCheckRuns(checkRuns);
+        if (checkRuns.isOverallFailure()) {
+            deps.onFailure("A check run failed.");
+            return;
+        }
+        if (checkRuns.isOverallSuccess()) {
+            deps.onSuccess();
+            return;
+        }
+        deps.onDelaying(opts.interval);
+        await deps.delay(opts.interval);
+    }
+    deps.onTimeout("Timed out waiting on check runs to all be successful.");
+}
 
 
 /***/ }),
