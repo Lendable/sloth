@@ -30223,36 +30223,42 @@ const wait_for_check_runs_1 = __nccwpck_require__(7808);
 const startTime = new Date();
 display_1.Display.ignoredCheckPatterns(inputs_1.inputs.ignored.patterns);
 const elapsedSeconds = () => Math.round((new Date().getTime() - startTime.getTime()) / 1000);
-(0, wait_for_check_runs_1.waitForCheckRuns)({
-    fetchCheckRuns: fetch_check_runs_1.fetchCheckRuns,
-    delay: delay_1.delay,
-    elapsedSeconds,
-    onSuccess: display_1.Display.overallSuccess,
-    onEmptySuccess: display_1.Display.emptySuccess,
-    onFailure: (message) => {
-        display_1.Display.overallFailure();
-        core.setFailed(message);
-    },
-    onTimeout: (message) => {
-        display_1.Display.timedOut();
-        core.setFailed(message);
-    },
-    onDelaying: display_1.Display.delaying,
-    onIterationStart: display_1.Display.startingIteration,
-    onDisplayCheckRuns: display_1.Display.relevantCheckRuns,
-}, {
-    interval: inputs_1.inputs.interval,
-    timeout: inputs_1.inputs.timeout,
-    allowEmpty: inputs_1.inputs.allowEmpty,
-    emptySettleTime: inputs_1.inputs.emptySettleTime,
-}).catch((error) => {
-    if (error instanceof Error) {
-        core.setFailed(error);
+const run = async () => {
+    try {
+        await (0, wait_for_check_runs_1.waitForCheckRuns)({
+            fetchCheckRuns: fetch_check_runs_1.fetchCheckRuns,
+            delay: delay_1.delay,
+            elapsedSeconds,
+            onSuccess: display_1.Display.overallSuccess,
+            onEmptySuccess: display_1.Display.emptySuccess,
+            onFailure: (message) => {
+                display_1.Display.overallFailure();
+                core.setFailed(message);
+            },
+            onTimeout: (message) => {
+                display_1.Display.timedOut();
+                core.setFailed(message);
+            },
+            onDelaying: display_1.Display.delaying,
+            onIterationStart: display_1.Display.startingIteration,
+            onDisplayCheckRuns: display_1.Display.relevantCheckRuns,
+        }, {
+            interval: inputs_1.inputs.interval,
+            timeout: inputs_1.inputs.timeout,
+            allowEmpty: inputs_1.inputs.allowEmpty,
+            emptySettleTime: inputs_1.inputs.emptySettleTime,
+        });
     }
-    else {
-        throw error;
+    catch (error) {
+        if (error instanceof Error) {
+            core.setFailed(error);
+        }
+        else {
+            throw error;
+        }
     }
-});
+};
+run();
 
 
 /***/ }),
