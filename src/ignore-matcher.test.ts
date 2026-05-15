@@ -83,6 +83,36 @@ describe("IgnoreMatcher", () => {
     });
   });
 
+  describe("case-insensitive mode", () => {
+    it("matches exact names regardless of case", () => {
+      const matcher = new IgnoreMatcher(["Lint"], false);
+
+      expect(matcher.matches("lint")).toBe(true);
+      expect(matcher.matches("LINT")).toBe(true);
+      expect(matcher.matches("Lint")).toBe(true);
+    });
+
+    it("matches wildcard patterns regardless of case", () => {
+      const matcher = new IgnoreMatcher(["deploy-*-staging"], false);
+
+      expect(matcher.matches("Deploy-api-Staging")).toBe(true);
+      expect(matcher.matches("DEPLOY-web-STAGING")).toBe(true);
+    });
+
+    it("still does not match unrelated names", () => {
+      const matcher = new IgnoreMatcher(["lint"], false);
+
+      expect(matcher.matches("linter")).toBe(false);
+      expect(matcher.matches("")).toBe(false);
+    });
+
+    it("preserves original pattern casing in patterns getter", () => {
+      const matcher = new IgnoreMatcher(["Lint", "Deploy-*-Staging"], false);
+
+      expect(matcher.patterns).toEqual(["Lint", "Deploy-*-Staging"]);
+    });
+  });
+
   describe("mixed exact and wildcard patterns", () => {
     it("matches either exact or wildcard entries", () => {
       const matcher = new IgnoreMatcher(["lint", "* / deploy / *-staging / *"]);

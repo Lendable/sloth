@@ -28,6 +28,10 @@ inputs:
     description: "A multi-line list of check run names or glob patterns to ignore when determining an overall result. Use * as a wildcard to match any sequence of characters (e.g. 'deploy-*-staging')."
     required: false
     default: ""
+  case-sensitive:
+    description: "When true (default), check run name comparisons for both the name input and ignored patterns are case-sensitive. Set to false to match regardless of case."
+    required: false
+    default: "true"
   allow-empty:
     description: "When true, Sloth succeeds if no other check runs are found after waiting for the settle period (see empty-settle-time). Useful when path-filtered workflows may not trigger on every PR. When false (default), Sloth waits until at least one check run appears or times out."
     required: false
