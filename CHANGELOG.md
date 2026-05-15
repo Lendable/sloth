@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/Lendable/sloth/compare/1.1.0...1.2.0) (2026-05-15)
+
+
+### Features
+
+* Add case-sensitive input to control name matching behaviour ([#139](https://github.com/Lendable/sloth/issues/139)) ([78a8f18](https://github.com/Lendable/sloth/commit/78a8f185e03b0ff0ac0f6defab9c56f90f9f2c90))
+
 ## [1.1.0](https://github.com/Lendable/sloth/compare/1.0.0...1.1.0) (2026-04-07)
 
 
