@@ -1,5 +1,37 @@
 # Changelog
 
+## [1.1.0](https://github.com/Lendable/sloth/compare/1.0.0...1.1.0) (2026-04-07)
+
+
+### Features
+
+* Add allow-empty option for path-filtered workflow support ([#131](https://github.com/Lendable/sloth/issues/131)) ([caf95c6](https://github.com/Lendable/sloth/commit/caf95c69c1f2288f768180938b4c9d6659176d76))
+
+## [1.0.0](https://github.com/Lendable/sloth/compare/0.2.2...1.0.0) (2026-03-30)
+
+
+### ⚠ BREAKING CHANGES
+
+* default node version bumped to v24
+
+### Features
+
+* Enhance ignored checks to support wildcard patterns ([#128](https://github.com/Lendable/sloth/issues/128)) ([7428b53](https://github.com/Lendable/sloth/commit/7428b53ec0e9f9b44883a530775fe67c62ed3e81))
+
+## [0.2.2](https://github.com/Lendable/sloth/compare/0.2.1...0.2.2) (2025-10-15)
+
+
+### Bug Fixes
+
+* Filter out older restarted actions ([#118](https://github.com/Lendable/sloth/issues/118)) ([8d1d319](https://github.com/Lendable/sloth/commit/8d1d319215b60b0c4324f8adc6fd7cc3b26be9c4))
+
+## [0.2.1](https://github.com/Lendable/sloth/compare/0.2.0...0.2.1) (2025-06-13)
+
+
+### Bug Fixes
+
+* **deps:** Update dependency @actions/core to v1.11.1 ([#90](https://github.com/Lendable/sloth/issues/90)) ([75b9566](https://github.com/Lendable/sloth/commit/75b956615dbc51d7851573ed0c8032c20f69b6b5))
+
 ## [0.2.0](https://github.com/Lendable/sloth/compare/0.1.3...0.2.0) (2024-05-02)
 
 

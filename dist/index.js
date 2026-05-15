@@ -1882,6 +1882,7 @@ class Context {
         this.action = process.env.GITHUB_ACTION;
         this.actor = process.env.GITHUB_ACTOR;
         this.job = process.env.GITHUB_JOB;
+        this.runAttempt = parseInt(process.env.GITHUB_RUN_ATTEMPT, 10);
         this.runNumber = parseInt(process.env.GITHUB_RUN_NUMBER, 10);
         this.runId = parseInt(process.env.GITHUB_RUN_ID, 10);
         this.apiUrl = (_a = process.env.GITHUB_API_URL) !== null && _a !== void 0 ? _a : `https://api.github.com`;
@@ -3569,13 +3570,28 @@ var import_graphql = __nccwpck_require__(7);
 var import_auth_token = __nccwpck_require__(7864);
 
 // pkg/dist-src/version.js
-var VERSION = "5.2.1";
+var VERSION = "5.2.2";
 
 // pkg/dist-src/index.js
 var noop = () => {
 };
 var consoleWarn = console.warn.bind(console);
 var consoleError = console.error.bind(console);
+function createLogger(logger = {}) {
+  if (typeof logger.debug !== "function") {
+    logger.debug = noop;
+  }
+  if (typeof logger.info !== "function") {
+    logger.info = noop;
+  }
+  if (typeof logger.warn !== "function") {
+    logger.warn = consoleWarn;
+  }
+  if (typeof logger.error !== "function") {
+    logger.error = consoleError;
+  }
+  return logger;
+}
 var userAgentTrail = `octokit-core.js/${VERSION} ${(0, import_universal_user_agent.getUserAgent)()}`;
 var Octokit = class {
   static {
@@ -3649,15 +3665,7 @@ var Octokit = class {
     }
     this.request = import_request.request.defaults(requestDefaults);
     this.graphql = (0, import_graphql.withCustomRequest)(this.request).defaults(requestDefaults);
-    this.log = Object.assign(
-      {
-        debug: noop,
-        info: noop,
-        warn: consoleWarn,
-        error: consoleError
-      },
-      options.log
-    );
+    this.log = createLogger(options.log);
     this.hook = hook;
     if (!options.authStrategy) {
       if (!options.auth) {
@@ -30004,12 +30012,16 @@ exports.Display = {
         console.info("");
         console.info(`🚀 ${colors.green}Success!${colors.reset}`);
     },
+    emptySuccess: () => {
+        console.info("");
+        console.info(`🚀 ${colors.green}No check runs found after settle period — allow-empty is enabled, passing.${colors.reset}`);
+    },
     startingIteration: () => {
         console.info("");
     },
-    ignoredCheckNames: (ignoredCheckNames) => {
-        if (ignoredCheckNames.size > 0) {
-            logAsGroup("Ignored check names", [...ignoredCheckNames]);
+    ignoredCheckPatterns: (patterns) => {
+        if (patterns.length > 0) {
+            logAsGroup("Ignored check patterns", patterns);
         }
     },
     relevantCheckRuns: (checkRuns) => {
@@ -30072,13 +30084,93 @@ const fetchCheckRuns = async () => {
         ref: inputs_1.inputs.ref,
         per_page: 100,
     });
-    let runs = [];
+    // Deduplicate check runs by name, keeping only the most recent one for each name.
+    // This is necessary because the GitHub API can return multiple runs for the same check
+    // (e.g., when a check is re-run), even with filter: "latest".
+    const latestRunsByName = new Map();
     for await (const { data } of iterator) {
-        runs = runs.concat(data);
+        for (const run of data) {
+            if (run.name === inputs_1.inputs.name || inputs_1.inputs.ignored.matches(run.name)) {
+                continue;
+            }
+            const existing = latestRunsByName.get(run.name);
+            if (!existing) {
+                latestRunsByName.set(run.name, run);
+            }
+            else {
+                const runTime = run.completed_at || run.started_at;
+                const existingTime = existing.completed_at || existing.started_at;
+                if ((runTime && (!existingTime || runTime > existingTime)) ||
+                    !runTime) {
+                    latestRunsByName.set(run.name, run);
+                }
+            }
+        }
     }
-    return new relevant_check_runs_1.RelevantCheckRuns(runs.filter((run) => run.name !== inputs_1.inputs.name && !inputs_1.inputs.ignored.has(run.name)));
+    return new relevant_check_runs_1.RelevantCheckRuns(Array.from(latestRunsByName.values()));
 };
 exports.fetchCheckRuns = fetchCheckRuns;
+
+
+/***/ }),
+
+/***/ 1010:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.IgnoreMatcher = void 0;
+/**
+ * Converts glob-style ignore patterns into an efficient check-run name matcher.
+ *
+ * Patterns containing `*` are treated as wildcards (matching any sequence of
+ * characters). Patterns without wildcards are matched exactly. All comparisons
+ * are case-sensitive.
+ */
+class IgnoreMatcher {
+    exactNames;
+    wildcardPatterns;
+    constructor(patterns) {
+        this.exactNames = new Set();
+        this.wildcardPatterns = [];
+        for (const pattern of patterns) {
+            if (pattern.includes("*")) {
+                this.wildcardPatterns.push({
+                    source: pattern,
+                    regex: toRegex(pattern),
+                });
+            }
+            else {
+                this.exactNames.add(pattern);
+            }
+        }
+    }
+    /** Returns true if the given check run name matches any ignored pattern. */
+    matches(name) {
+        if (this.exactNames.has(name)) {
+            return true;
+        }
+        return this.wildcardPatterns.some(({ regex }) => regex.test(name));
+    }
+    /** Returns the raw patterns for display/logging purposes. */
+    get patterns() {
+        return [
+            ...this.exactNames,
+            ...this.wildcardPatterns.map(({ source }) => source),
+        ];
+    }
+    get size() {
+        return this.exactNames.size + this.wildcardPatterns.length;
+    }
+}
+exports.IgnoreMatcher = IgnoreMatcher;
+/** Escapes regex special characters except `*`, then replaces `*` with `.*`. */
+function toRegex(pattern) {
+    const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, "\\$&");
+    const regexStr = escaped.replace(/\*/g, ".*");
+    return new RegExp(`^${regexStr}$`);
+}
 
 
 /***/ }),
@@ -30127,49 +30219,46 @@ const delay_1 = __nccwpck_require__(6252);
 const fetch_check_runs_1 = __nccwpck_require__(1833);
 const inputs_1 = __nccwpck_require__(8422);
 const display_1 = __nccwpck_require__(4857);
+const wait_for_check_runs_1 = __nccwpck_require__(7808);
 const startTime = new Date();
-const shouldTimeOut = () => {
-    const executionTime = Math.round((new Date().getTime() - startTime.getTime()) / 1000);
-    return executionTime > inputs_1.inputs.timeout;
-};
-display_1.Display.ignoredCheckNames(inputs_1.inputs.ignored);
-const waitForCheckRuns = async () => {
+display_1.Display.ignoredCheckPatterns(inputs_1.inputs.ignored.patterns);
+const elapsedSeconds = () => Math.round((new Date().getTime() - startTime.getTime()) / 1000);
+const run = async () => {
     try {
-        while (!shouldTimeOut()) {
-            display_1.Display.startingIteration();
-            const checkRuns = await (0, fetch_check_runs_1.fetchCheckRuns)();
-            if (checkRuns.total() === 0) {
-                display_1.Display.delaying(inputs_1.inputs.interval);
-                await (0, delay_1.delay)(inputs_1.inputs.interval);
-                continue;
-            }
-            display_1.Display.relevantCheckRuns(checkRuns);
-            if (checkRuns.isOverallFailure()) {
+        await (0, wait_for_check_runs_1.waitForCheckRuns)({
+            fetchCheckRuns: fetch_check_runs_1.fetchCheckRuns,
+            delay: delay_1.delay,
+            elapsedSeconds,
+            onSuccess: display_1.Display.overallSuccess,
+            onEmptySuccess: display_1.Display.emptySuccess,
+            onFailure: (message) => {
                 display_1.Display.overallFailure();
-                core.setFailed("A check run failed.");
-                return;
-            }
-            if (checkRuns.isOverallSuccess()) {
-                display_1.Display.overallSuccess();
-                return;
-            }
-            display_1.Display.delaying(inputs_1.inputs.interval);
-            await (0, delay_1.delay)(inputs_1.inputs.interval);
-        }
-        display_1.Display.timedOut();
-        core.setFailed("Timed out waiting on check runs to all be successful.");
+                core.setFailed(message);
+            },
+            onTimeout: (message) => {
+                display_1.Display.timedOut();
+                core.setFailed(message);
+            },
+            onDelaying: display_1.Display.delaying,
+            onIterationStart: display_1.Display.startingIteration,
+            onDisplayCheckRuns: display_1.Display.relevantCheckRuns,
+        }, {
+            interval: inputs_1.inputs.interval,
+            timeout: inputs_1.inputs.timeout,
+            allowEmpty: inputs_1.inputs.allowEmpty,
+            emptySettleTime: inputs_1.inputs.emptySettleTime,
+        });
     }
     catch (error) {
         if (error instanceof Error) {
             core.setFailed(error);
-            return;
         }
         else {
             throw error;
         }
     }
 };
-waitForCheckRuns();
+run();
 
 
 /***/ }),
@@ -30215,6 +30304,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.inputs = void 0;
 const core = __importStar(__nccwpck_require__(7484));
+const ignore_matcher_1 = __nccwpck_require__(1010);
 const interval = Number(core.getInput("interval"));
 if (!Number.isInteger(interval)) {
     throw new Error("Invalid interval");
@@ -30229,13 +30319,22 @@ if (!Number.isInteger(timeout)) {
 if (timeout < 1) {
     throw new Error("Timeout must be greater than 0");
 }
+const emptySettleTime = Number(core.getInput("empty-settle-time"));
+if (!Number.isInteger(emptySettleTime)) {
+    throw new Error("Invalid empty-settle-time");
+}
+if (emptySettleTime < 0) {
+    throw new Error("empty-settle-time must be 0 or greater");
+}
 exports.inputs = {
     token: core.getInput("token", { required: true }),
     name: core.getInput("name"),
     interval,
     timeout,
     ref: core.getInput("ref"),
-    ignored: new Set(core.getMultilineInput("ignored")),
+    ignored: new ignore_matcher_1.IgnoreMatcher(core.getMultilineInput("ignored")),
+    allowEmpty: core.getBooleanInput("allow-empty"),
+    emptySettleTime,
 };
 
 
@@ -30282,6 +30381,44 @@ class RelevantCheckRuns {
     }
 }
 exports.RelevantCheckRuns = RelevantCheckRuns;
+
+
+/***/ }),
+
+/***/ 7808:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.waitForCheckRuns = waitForCheckRuns;
+async function waitForCheckRuns(deps, opts) {
+    while (deps.elapsedSeconds() <= opts.timeout) {
+        deps.onIterationStart();
+        const checkRuns = await deps.fetchCheckRuns();
+        if (checkRuns.total() === 0) {
+            if (opts.allowEmpty && deps.elapsedSeconds() >= opts.emptySettleTime) {
+                deps.onEmptySuccess();
+                return;
+            }
+            deps.onDelaying(opts.interval);
+            await deps.delay(opts.interval);
+            continue;
+        }
+        deps.onDisplayCheckRuns(checkRuns);
+        if (checkRuns.isOverallFailure()) {
+            deps.onFailure("A check run failed.");
+            return;
+        }
+        if (checkRuns.isOverallSuccess()) {
+            deps.onSuccess();
+            return;
+        }
+        deps.onDelaying(opts.interval);
+        await deps.delay(opts.interval);
+    }
+    deps.onTimeout("Timed out waiting on check runs to all be successful.");
+}
 
 
 /***/ }),

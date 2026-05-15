@@ -14,13 +14,13 @@ jobs:
     runs-on: ubuntu-24.04
     name: Release Automation
     steps:
-      - uses: actions/create-github-app-token@af35edadc00be37caa72ed9f3e6d5f7801bfdf09 # v1
+      - uses: actions/create-github-app-token@f8d387b68d61c58ab83c6c016672934102569859 # v3
         id: generate-token
         with:
           app-id: ${{ secrets.LENDABOT_APP_ID }}
           private-key: ${{ secrets.LENDABOT_APP_PRIVATE_KEY }}
 
-      - uses: googleapis/release-please-action@a02a34c4d625f9be7cb89156071d8567266a2445 # v4
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5
         id: release
         with:
           token: ${{ steps.generate-token.outputs.token }}
@@ -28,7 +28,7 @@ jobs:
           manifest-file: .release-please-manifest.json
           include-component-in-tag: false
 
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         if: ${{ steps.release.outputs.release_created }}
       - name: Tag Major and Minor versions
         if: ${{ steps.release.outputs.release_created }}

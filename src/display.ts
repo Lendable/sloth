@@ -50,13 +50,20 @@ export const Display = {
     console.info(`🚀 ${colors.green}Success!${colors.reset}`);
   },
 
+  emptySuccess: () => {
+    console.info("");
+    console.info(
+      `🚀 ${colors.green}No check runs found after settle period — allow-empty is enabled, passing.${colors.reset}`,
+    );
+  },
+
   startingIteration: () => {
     console.info("");
   },
 
-  ignoredCheckNames: (ignoredCheckNames: Set<string>) => {
-    if (ignoredCheckNames.size > 0) {
-      logAsGroup("Ignored check names", [...ignoredCheckNames]);
+  ignoredCheckPatterns: (patterns: string[]) => {
+    if (patterns.length > 0) {
+      logAsGroup("Ignored check patterns", patterns);
     }
   },
 
