@@ -11,7 +11,7 @@ export class IgnoreMatcher {
   private readonly wildcardPatterns: { source: string; regex: RegExp }[];
   private readonly caseSensitive: boolean;
 
-  constructor(patterns: string[], caseSensitive: boolean = true) {
+  constructor(patterns: string[], caseSensitive = true) {
     this.caseSensitive = caseSensitive;
     this.exactNames = new Map<string, string>();
     this.wildcardPatterns = [];

@@ -81,7 +81,6 @@ describe("IgnoreMatcher", () => {
       expect(matcher.matches("anything")).toBe(true);
       expect(matcher.matches("")).toBe(true);
     });
-
   });
 
   describe("case-insensitive mode", () => {
