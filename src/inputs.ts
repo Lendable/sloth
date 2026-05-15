@@ -31,13 +31,16 @@ if (emptySettleTime < 0) {
   throw new Error("empty-settle-time must be 0 or greater");
 }
 
+const caseSensitive = core.getBooleanInput("case-sensitive");
+
 export const inputs = {
   token: core.getInput("token", { required: true }),
   name: core.getInput("name"),
   interval,
   timeout,
   ref: core.getInput("ref"),
-  ignored: new IgnoreMatcher(core.getMultilineInput("ignored")),
+  ignored: new IgnoreMatcher(core.getMultilineInput("ignored"), caseSensitive),
   allowEmpty: core.getBooleanInput("allow-empty"),
   emptySettleTime,
+  caseSensitive,
 } as const;
