@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
 import type { Octokit } from "@octokit/core";
 import { IgnoreMatcher } from "./ignore-matcher";
 
@@ -22,7 +22,13 @@ vi.mock("./inputs", () => ({
   },
 }));
 
-const { fetchCheckRuns } = await import("./fetch-check-runs");
+let fetchCheckRuns: Awaited<
+  typeof import("./fetch-check-runs")
+>["fetchCheckRuns"];
+
+beforeAll(async () => {
+  ({ fetchCheckRuns } = await import("./fetch-check-runs"));
+});
 
 describe("fetchCheckRuns", () => {
   beforeEach(() => {
@@ -33,10 +39,34 @@ describe("fetchCheckRuns", () => {
     mockPaginateIterator.mockImplementation(async function* () {
       yield {
         data: [
-          { name: "test-check-1", status: "completed", conclusion: "success", completed_at: "2024-01-01", started_at: null },
-          { name: "sloth", status: "completed", conclusion: "success", completed_at: "2024-01-01", started_at: null },
-          { name: "ignored-check", status: "completed", conclusion: "success", completed_at: "2024-01-01", started_at: null },
-          { name: "test-check-2", status: "in_progress", conclusion: null, completed_at: null, started_at: "2024-01-01" },
+          {
+            name: "test-check-1",
+            status: "completed",
+            conclusion: "success",
+            completed_at: "2024-01-01",
+            started_at: null,
+          },
+          {
+            name: "sloth",
+            status: "completed",
+            conclusion: "success",
+            completed_at: "2024-01-01",
+            started_at: null,
+          },
+          {
+            name: "ignored-check",
+            status: "completed",
+            conclusion: "success",
+            completed_at: "2024-01-01",
+            started_at: null,
+          },
+          {
+            name: "test-check-2",
+            status: "in_progress",
+            conclusion: null,
+            completed_at: null,
+            started_at: "2024-01-01",
+          },
         ],
       };
     });
@@ -51,8 +81,28 @@ describe("fetchCheckRuns", () => {
 
   it("paginates across multiple pages", async () => {
     mockPaginateIterator.mockImplementation(async function* () {
-      yield { data: [{ name: "check-1", status: "completed", conclusion: "success", completed_at: "2024-01-01", started_at: null }] };
-      yield { data: [{ name: "check-2", status: "completed", conclusion: "success", completed_at: "2024-01-01", started_at: null }] };
+      yield {
+        data: [
+          {
+            name: "check-1",
+            status: "completed",
+            conclusion: "success",
+            completed_at: "2024-01-01",
+            started_at: null,
+          },
+        ],
+      };
+      yield {
+        data: [
+          {
+            name: "check-2",
+            status: "completed",
+            conclusion: "success",
+            completed_at: "2024-01-01",
+            started_at: null,
+          },
+        ],
+      };
     });
 
     const result = await fetchCheckRuns();
@@ -73,8 +123,20 @@ describe("fetchCheckRuns", () => {
     mockPaginateIterator.mockImplementation(async function* () {
       yield {
         data: [
-          { name: "test-1", status: "completed", conclusion: "failure", completed_at: "2024-01-01", started_at: null },
-          { name: "test-2", status: "completed", conclusion: "success", completed_at: "2024-01-01", started_at: null },
+          {
+            name: "test-1",
+            status: "completed",
+            conclusion: "failure",
+            completed_at: "2024-01-01",
+            started_at: null,
+          },
+          {
+            name: "test-2",
+            status: "completed",
+            conclusion: "success",
+            completed_at: "2024-01-01",
+            started_at: null,
+          },
         ],
       };
     });
@@ -87,8 +149,20 @@ describe("fetchCheckRuns", () => {
     mockPaginateIterator.mockImplementation(async function* () {
       yield {
         data: [
-          { name: "test-1", status: "completed", conclusion: "success", completed_at: "2024-01-01", started_at: null },
-          { name: "test-2", status: "completed", conclusion: "success", completed_at: "2024-01-01", started_at: null },
+          {
+            name: "test-1",
+            status: "completed",
+            conclusion: "success",
+            completed_at: "2024-01-01",
+            started_at: null,
+          },
+          {
+            name: "test-2",
+            status: "completed",
+            conclusion: "success",
+            completed_at: "2024-01-01",
+            started_at: null,
+          },
         ],
       };
     });

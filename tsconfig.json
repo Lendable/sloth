@@ -1,7 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
   "compilerOptions": {
-    "types": ["jest", "node"],
     "target": "ES2022",
     "module": "NodeNext",
     "rootDir": "./src",
