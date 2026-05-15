@@ -30090,7 +30090,10 @@ const fetchCheckRuns = async () => {
     const latestRunsByName = new Map();
     for await (const { data } of iterator) {
         for (const run of data) {
-            if (run.name === inputs_1.inputs.name || inputs_1.inputs.ignored.matches(run.name)) {
+            const selfMatch = inputs_1.inputs.caseSensitive
+                ? run.name === inputs_1.inputs.name
+                : run.name.toLowerCase() === inputs_1.inputs.name.toLowerCase();
+            if (selfMatch || inputs_1.inputs.ignored.matches(run.name)) {
                 continue;
             }
             const existing = latestRunsByName.get(run.name);
@@ -30125,30 +30128,35 @@ exports.IgnoreMatcher = void 0;
  * Converts glob-style ignore patterns into an efficient check-run name matcher.
  *
  * Patterns containing `*` are treated as wildcards (matching any sequence of
- * characters). Patterns without wildcards are matched exactly. All comparisons
- * are case-sensitive.
+ * characters). Patterns without wildcards are matched exactly. Comparisons are
+ * case-sensitive by default; pass `caseSensitive: false` to opt in to
+ * case-insensitive matching.
  */
 class IgnoreMatcher {
-    exactNames;
+    exactNames; // lookup key → original
     wildcardPatterns;
-    constructor(patterns) {
-        this.exactNames = new Set();
+    caseSensitive;
+    constructor(patterns, caseSensitive = true) {
+        this.caseSensitive = caseSensitive;
+        this.exactNames = new Map();
         this.wildcardPatterns = [];
         for (const pattern of patterns) {
             if (pattern.includes("*")) {
                 this.wildcardPatterns.push({
                     source: pattern,
-                    regex: toRegex(pattern),
+                    regex: toRegex(pattern, caseSensitive),
                 });
             }
             else {
-                this.exactNames.add(pattern);
+                const key = caseSensitive ? pattern : pattern.toLowerCase();
+                this.exactNames.set(key, pattern);
             }
         }
     }
     /** Returns true if the given check run name matches any ignored pattern. */
     matches(name) {
-        if (this.exactNames.has(name)) {
+        const key = this.caseSensitive ? name : name.toLowerCase();
+        if (this.exactNames.has(key)) {
             return true;
         }
         return this.wildcardPatterns.some(({ regex }) => regex.test(name));
@@ -30156,7 +30164,7 @@ class IgnoreMatcher {
     /** Returns the raw patterns for display/logging purposes. */
     get patterns() {
         return [
-            ...this.exactNames,
+            ...this.exactNames.values(),
             ...this.wildcardPatterns.map(({ source }) => source),
         ];
     }
@@ -30166,10 +30174,10 @@ class IgnoreMatcher {
 }
 exports.IgnoreMatcher = IgnoreMatcher;
 /** Escapes regex special characters except `*`, then replaces `*` with `.*`. */
-function toRegex(pattern) {
+function toRegex(pattern, caseSensitive) {
     const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, "\\$&");
     const regexStr = escaped.replace(/\*/g, ".*");
-    return new RegExp(`^${regexStr}$`);
+    return new RegExp(`^${regexStr}$`, caseSensitive ? "" : "i");
 }
 
 
@@ -30326,15 +30334,17 @@ if (!Number.isInteger(emptySettleTime)) {
 if (emptySettleTime < 0) {
     throw new Error("empty-settle-time must be 0 or greater");
 }
+const caseSensitive = core.getBooleanInput("case-sensitive");
 exports.inputs = {
     token: core.getInput("token", { required: true }),
     name: core.getInput("name"),
     interval,
     timeout,
     ref: core.getInput("ref"),
-    ignored: new ignore_matcher_1.IgnoreMatcher(core.getMultilineInput("ignored")),
+    ignored: new ignore_matcher_1.IgnoreMatcher(core.getMultilineInput("ignored"), caseSensitive),
     allowEmpty: core.getBooleanInput("allow-empty"),
     emptySettleTime,
+    caseSensitive,
 };
 
 
