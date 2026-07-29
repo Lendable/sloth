@@ -1,7 +1,7 @@
 import * as github from "@actions/github";
 import { inputs } from "./inputs";
 import { RelevantCheckRuns } from "./relevant-check-runs";
-import type { PaginatingEndpoints } from "@octokit/plugin-paginate-rest/dist-types/types";
+import type { PaginatingEndpoints } from "@octokit/plugin-paginate-rest";
 
 export type CheckRun =
   PaginatingEndpoints["GET /repos/{owner}/{repo}/commits/{ref}/check-runs"]["response"]["data"][number];
