@@ -2,6 +2,7 @@
   "name": "sloth",
   "version": "1.2.0",
   "private": true,
+  "type": "module",
   "exports": {
     ".": "./dist/index.js"
   },
@@ -10,20 +11,21 @@
   },
   "license": "MIT",
   "scripts": {
-    "bundle": "npx ncc build src/index.ts -o dist --source-map --license licenses.txt",
+    "bundle": "node esbuild.config.js",
     "lint": "npx eslint . -c .eslintrc.yml",
+    "typecheck": "npx tsc --noEmit",
     "test": "npx vitest run",
     "test:watch": "npx vitest"
   },
   "dependencies": {
-    "@actions/core": "^2.0.3",
-    "@actions/github": "^8.0.1"
+    "@actions/core": "^3.0.1",
+    "@actions/github": "^9.1.1"
   },
   "devDependencies": {
     "@types/node": "^20.12.7",
     "@typescript-eslint/eslint-plugin": "^7.7.0",
     "@typescript-eslint/parser": "^7.7.0",
-    "@vercel/ncc": "^0.38.1",
+    "esbuild": "^0.28.1",
     "eslint": "^8.57.0",
     "eslint-plugin-github": "^4.10.2",
     "eslint-plugin-jsonc": "^2.15.1",

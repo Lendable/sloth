@@ -10,7 +10,8 @@ ignorePatterns:
   - '!.*'
   - '**/node_modules/.*'
   - '**/dist/.*'
-  - '.github/commitlint.config.js'
+  - '.github/commitlint.config.cjs'
+  - 'esbuild.config.js'
 
 parser: '@typescript-eslint/parser'
 
