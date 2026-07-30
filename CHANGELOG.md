@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/Lendable/sloth/compare/1.2.0...1.2.1) (2026-07-30)
+
+
+### Bug Fixes
+
+* **deps:** Update @actions/core, @actions/github and undici to patch advisories ([#148](https://github.com/Lendable/sloth/issues/148)) ([4f4f118](https://github.com/Lendable/sloth/commit/4f4f118709af7f483725a9cdea9dcfb329bbd4b7))
+
 ## [1.2.0](https://github.com/Lendable/sloth/compare/1.1.0...1.2.0) (2026-05-15)
 
 
