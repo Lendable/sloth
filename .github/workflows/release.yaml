@@ -31,16 +31,19 @@ jobs:
           manifest-file: .release-please-manifest.json
           include-component-in-tag: false
 
-      # persist-credentials must stay enabled: the tag step below pushes to `origin`
-      # using the credentials this checkout writes into .git/config.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         if: ${{ steps.release.outputs.release_created }}
+        with:
+          token: ${{ steps.generate-token.outputs.token }}
+          persist-credentials: false
       - name: Tag Major and Minor versions
         if: ${{ steps.release.outputs.release_created }}
+        env:
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git remote add gh-token "https://${{ steps.generate-token.outputs.token }}@github.com/Lendable/sloth.git"
+          gh auth setup-git
           git tag -d v${{ steps.release.outputs.major }} || true
           git tag -d v${{ steps.release.outputs.major }}.${{ steps.release.outputs.minor }} || true
           git push origin :v${{ steps.release.outputs.major }} || true
