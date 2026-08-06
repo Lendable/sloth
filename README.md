@@ -41,7 +41,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Sloth
-        uses: lendable/sloth@v0
+        uses: lendable/sloth@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 ```
@@ -88,7 +88,7 @@ Set `allow-empty: "true"` to let Sloth succeed when no other checks are found. T
 
 ```yaml
 - name: Sloth
-  uses: lendable/sloth@v0
+  uses: lendable/sloth@v1
   with:
     token: ${{ secrets.GITHUB_TOKEN }}
     allow-empty: "true"
