@@ -35,6 +35,7 @@ on:
 permissions:
   contents: read
   checks: read
+  actions: read
 
 jobs:
   sloth:
@@ -94,3 +95,17 @@ Set `allow-empty: "true"` to let Sloth succeed when no other checks are found. T
     allow-empty: "true"
     empty-settle-time: "30"
 ```
+
+## Cancelled Check Runs
+
+A cancelled check run normally fails Sloth. But a workflow run can be cancelled because a newer run of the same workflow replaced it on the same commit, for example by a `concurrency` group with `cancel-in-progress`. Its check runs stay on the commit, and the newer run only creates check runs for jobs behind `needs:` once the jobs they need have finished. Until then, the cancelled check run is the most recent one with its name.
+
+So when the most recent check run with a name was cancelled by GitHub Actions, and a newer run (or a newer attempt) of the same workflow exists on the same commit:
+
+- Sloth goes through the newer runs newest first. The first one with its own check run with that name provides the result, even if it finished before the cancellation and whatever that run's overall result.
+- A newer run without its own check run is only passed over once it has concluded and Sloth has read the check runs again since, so it can't miss one the run created just before concluding. Until then, Sloth waits for it and lists the check under 🔁 instead of failing. If that run is re-run, Sloth waits for the new attempt in the same way.
+- If none of the newer runs has its own check run with that name, the newest one decides. If it succeeded, the check is listed under ⏭️ and counts like a skipped one. If it didn't succeed (for example, it was cancelled itself before running any job), the cancelled check run stands and fails Sloth.
+
+This applies whatever cancelled the older run, including a manual cancellation. A cancelled check run with no newer run of its workflow on the commit still fails Sloth immediately.
+
+This needs the `actions: read` permission, as in the example workflow above. Without it, Sloth logs a warning and counts every cancelled check run as a failure, as before.
