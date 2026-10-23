@@ -27214,6 +27214,9 @@ function setFailed(message) {
 function error(message, properties = {}) {
   issueCommand("error", toCommandProperties(properties), message instanceof Error ? message.toString() : message);
 }
+function warning(message, properties = {}) {
+  issueCommand("warning", toCommandProperties(properties), message instanceof Error ? message.toString() : message);
+}
 function startGroup(name) {
   issue("group", name);
 }
@@ -31292,7 +31295,17 @@ var RelevantCheckRuns = class {
   pending = [];
   failed = [];
   succeeded = [];
-  constructor(all) {
+  awaitingReplacement;
+  superseded;
+  /**
+   * @param awaitingReplacement cancelled check runs whose workflow run has a newer
+   *   run that is still in progress or has only just concluded; they count as
+   *   pending.
+   * @param superseded names whose most recent check run was cancelled and replaced
+   *   by a newer workflow run that succeeded without running the job again; they
+   *   count as succeeded, like skipped check runs.
+   */
+  constructor(all, awaitingReplacement = [], superseded = []) {
     for (const run2 of all) {
       if (!run2.conclusion) {
         this.pending.push(run2.name);
@@ -31302,49 +31315,237 @@ var RelevantCheckRuns = class {
         this.succeeded.push(run2.name);
       }
     }
+    this.awaitingReplacement = awaitingReplacement.map((run2) => run2.name);
+    this.superseded = [...superseded];
     this.pending.sort();
     this.failed.sort();
     this.succeeded.sort();
+    this.awaitingReplacement.sort();
+    this.superseded.sort();
   }
   isOverallFailure() {
     return this.failed.length > 0;
   }
   isOverallSuccess() {
-    return !this.isOverallFailure() && this.pending.length === 0 && this.succeeded.length > 0;
+    return !this.isOverallFailure() && this.pending.length === 0 && this.awaitingReplacement.length === 0 && this.succeeded.length + this.superseded.length > 0;
   }
   total() {
-    return this.pending.length + this.failed.length + this.succeeded.length;
+    return this.pending.length + this.failed.length + this.succeeded.length + this.awaitingReplacement.length + this.superseded.length;
   }
 };
 
+// src/select-check-runs.ts
+async function selectCheckRuns(all, replacementsOf) {
+  const runsByName = /* @__PURE__ */ new Map();
+  for (const run2 of all) {
+    runsByName.set(run2.name, [...runsByName.get(run2.name) ?? [], run2]);
+  }
+  const selections = await Promise.all(
+    Array.from(
+      runsByName.entries(),
+      async ([name, runs]) => selectForName(name, runs, replacementsOf)
+    )
+  );
+  const latest = [];
+  const awaitingReplacement = [];
+  const superseded = [];
+  for (const selection of selections) {
+    if (selection.kind === "latest") {
+      latest.push(selection.run);
+    } else if (selection.kind === "awaiting-replacement") {
+      awaitingReplacement.push(selection.run);
+    } else {
+      superseded.push(selection.name);
+    }
+  }
+  return new RelevantCheckRuns(latest, awaitingReplacement, superseded);
+}
+async function selectForName(name, runs, replacementsOf) {
+  let candidates = runs;
+  while (true) {
+    const run2 = mostRecent(candidates);
+    const replacements = await replacementsOf(run2);
+    if (replacements.length === 0) {
+      return { kind: "latest", run: run2 };
+    }
+    const next = fromReplacements(name, run2, candidates, replacements);
+    if (!Array.isArray(next)) {
+      return next;
+    }
+    candidates = next;
+  }
+}
+function fromReplacements(name, cancelled, candidates, replacements) {
+  for (const replacement of replacements) {
+    const own = candidates.filter(
+      (candidate) => candidate !== cancelled && replacement.checkSuiteId !== null && candidate.check_suite?.id === replacement.checkSuiteId
+    );
+    if (own.length > 0) {
+      return own;
+    }
+    if (!replacement.settled) {
+      return { kind: "awaiting-replacement", run: cancelled };
+    }
+  }
+  return replacements[0].succeeded ? { kind: "superseded", name } : { kind: "latest", run: cancelled };
+}
+function mostRecent(runs) {
+  return runs.reduce((current, run2) => {
+    const runTime = run2.completed_at || run2.started_at;
+    const currentTime = current.completed_at || current.started_at;
+    return !runTime || !currentTime || runTime > currentTime ? run2 : current;
+  });
+}
+
+// src/superseded-cancellations.ts
+var successfulConclusions = ["success", "neutral", "skipped"];
+var ReplacementTracker = class {
+  constructor(api, warn) {
+    this.api = api;
+    this.warn = warn;
+  }
+  api;
+  warn;
+  jobs = /* @__PURE__ */ new Map();
+  workflowIds = /* @__PURE__ */ new Map();
+  /** The poll in which each workflow run attempt was first seen completed. */
+  completedSince = /* @__PURE__ */ new Map();
+  poll = 0;
+  runsThisPoll = /* @__PURE__ */ new Map();
+  /** Call after listing the poll's check runs, before asking for any replacements. */
+  startPoll() {
+    this.poll++;
+    this.runsThisPoll = /* @__PURE__ */ new Map();
+  }
+  /**
+   * Returns the replacements newest first, or none when the check run was not
+   * cancelled by GitHub Actions or nothing replaced its workflow run.
+   *
+   * A lookup that fails counts as no replacement, so the cancelled check run still
+   * fails Sloth.
+   */
+  async replacements(checkRun) {
+    if (checkRun.conclusion !== "cancelled" || checkRun.app?.slug !== "github-actions") {
+      return [];
+    }
+    try {
+      return await this.lookUp(checkRun);
+    } catch (error2) {
+      const hint = isMissingPermission(error2) ? " Sloth needs the `actions: read` permission for this." : "";
+      this.warn(
+        `Could not check whether cancelled check run "${checkRun.name}" was replaced by a newer workflow run, so it counts as a failure.${hint} ${error2 instanceof Error ? error2.message : String(error2)}`
+      );
+      return [];
+    }
+  }
+  async lookUp(checkRun) {
+    const job = await memoize(
+      this.jobs,
+      checkRun.id,
+      async () => this.api.getJob(checkRun.id)
+    );
+    const workflowId = await memoize(
+      this.workflowIds,
+      job.runId,
+      async () => this.api.getWorkflowId(job.runId)
+    );
+    const runs = await memoize(
+      this.runsThisPoll,
+      `${workflowId}:${job.headSha}`,
+      async () => this.api.listRuns(workflowId, job.headSha)
+    );
+    for (const run2 of runs) {
+      if (run2.completed && !this.completedSince.has(attemptOf(run2))) {
+        this.completedSince.set(attemptOf(run2), this.poll);
+      }
+    }
+    const cancelledRun = runs.find((run2) => run2.id === job.runId);
+    if (!cancelledRun) {
+      return [];
+    }
+    const replacements = runs.filter((run2) => run2.runNumber > cancelledRun.runNumber).sort((a, b) => b.runNumber - a.runNumber);
+    if (job.runAttempt < cancelledRun.runAttempt) {
+      replacements.push(cancelledRun);
+    }
+    return replacements.map((run2) => ({
+      checkSuiteId: run2.checkSuiteId,
+      settled: (this.completedSince.get(attemptOf(run2)) ?? this.poll) < this.poll,
+      succeeded: successfulConclusions.includes(run2.conclusion ?? "")
+    }));
+  }
+};
+function attemptOf(run2) {
+  return `${run2.id}/${run2.runAttempt}`;
+}
+async function memoize(cache, key, load) {
+  let value = cache.get(key);
+  if (!value) {
+    value = load();
+    cache.set(key, value);
+  }
+  return value;
+}
+function isMissingPermission(error2) {
+  return error2 instanceof Error && "status" in error2 && error2.status === 403 && error2.message.includes("Resource not accessible by integration");
+}
+
 // src/fetch-check-runs.ts
 var octokit = getOctokit(inputs.token);
+var actionsApi = {
+  getJob: async (jobId) => {
+    const { data } = await octokit.rest.actions.getJobForWorkflowRun({
+      ...context2.repo,
+      job_id: jobId
+    });
+    return {
+      runId: data.run_id,
+      runAttempt: data.run_attempt ?? 1,
+      headSha: data.head_sha
+    };
+  },
+  getWorkflowId: async (runId) => {
+    const { data } = await octokit.rest.actions.getWorkflowRun({
+      ...context2.repo,
+      run_id: runId
+    });
+    return data.workflow_id;
+  },
+  listRuns: async (workflowId, headSha) => {
+    const runs = await octokit.paginate(octokit.rest.actions.listWorkflowRuns, {
+      ...context2.repo,
+      workflow_id: workflowId,
+      head_sha: headSha,
+      per_page: 100
+    });
+    return runs.map((run2) => ({
+      id: run2.id,
+      runNumber: run2.run_number,
+      runAttempt: run2.run_attempt ?? 1,
+      checkSuiteId: run2.check_suite_id ?? null,
+      completed: run2.status === "completed",
+      conclusion: run2.conclusion
+    }));
+  }
+};
+var tracker = new ReplacementTracker(actionsApi, warning);
 var fetchCheckRuns = async () => {
   const iterator2 = octokit.paginate.iterator(octokit.rest.checks.listForRef, {
     ...context2.repo,
     ref: inputs.ref,
     per_page: 100
   });
-  const latestRunsByName = /* @__PURE__ */ new Map();
+  const runs = [];
   for await (const { data } of iterator2) {
     for (const run2 of data) {
       const selfMatch = inputs.caseSensitive ? run2.name === inputs.name : run2.name.toLowerCase() === inputs.name.toLowerCase();
       if (selfMatch || inputs.ignored.matches(run2.name)) {
         continue;
       }
-      const existing = latestRunsByName.get(run2.name);
-      if (!existing) {
-        latestRunsByName.set(run2.name, run2);
-      } else {
-        const runTime = run2.completed_at || run2.started_at;
-        const existingTime = existing.completed_at || existing.started_at;
-        if (runTime && (!existingTime || runTime > existingTime) || !runTime) {
-          latestRunsByName.set(run2.name, run2);
-        }
-      }
+      runs.push(run2);
     }
   }
-  return new RelevantCheckRuns(Array.from(latestRunsByName.values()));
+  tracker.startPoll();
+  return selectCheckRuns(runs, async (run2) => tracker.replacements(run2));
 };
 
 // src/display.ts
@@ -31362,9 +31563,12 @@ var logAsGroup = (name, lines) => {
     endGroup();
   }
 };
-var logCheckRuns = (icon, color, runs) => {
+var logCheckRuns = (icon, color, runs, label = "") => {
   if (runs.length > 0) {
-    logAsGroup(`${icon} ${color}${runs.length}${colors.reset}`, runs);
+    logAsGroup(
+      `${icon} ${color}${runs.length}${colors.reset}${label ? ` ${label}` : ""}`,
+      runs
+    );
   }
 };
 var Display = {
@@ -31401,6 +31605,18 @@ var Display = {
     logCheckRuns("\u2705", colors.green, checkRuns.succeeded);
     logCheckRuns("\u274C", colors.red, checkRuns.failed);
     logCheckRuns("\u23F3", colors.reset, checkRuns.pending);
+    logCheckRuns(
+      "\u{1F501}",
+      colors.reset,
+      checkRuns.awaitingReplacement,
+      "cancelled, waiting for the outcome of a newer run of their workflow"
+    );
+    logCheckRuns(
+      "\u23ED\uFE0F",
+      colors.reset,
+      checkRuns.superseded,
+      "cancelled and replaced by a newer run of their workflow"
+    );
   }
 };
 
