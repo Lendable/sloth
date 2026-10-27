@@ -46,6 +46,20 @@ describe("RelevantCheckRuns", () => {
     expect(runs.failed).toEqual([]);
   });
 
+  it("keeps cancelled runs awaiting a replacement and superseded names apart", () => {
+    const runs = new RelevantCheckRuns(
+      [stubCheckRun("deploy", "cancelled")],
+      [stubCheckRun("validate", "cancelled")],
+      ["e2e"],
+    );
+
+    expect(runs.awaitingReplacement).toEqual(["validate"]);
+    expect(runs.superseded).toEqual(["e2e"]);
+    expect(runs.failed).toEqual(["deploy"]);
+    expect(runs.pending).toEqual([]);
+    expect(runs.total()).toBe(3);
+  });
+
   it("sorts names alphabetically within each category", () => {
     const runs = new RelevantCheckRuns([
       stubCheckRun("z-lint", "success"),
@@ -104,6 +118,21 @@ describe("RelevantCheckRuns", () => {
       ]);
 
       expect(runs.isOverallSuccess()).toBe(false);
+    });
+
+    it("returns false while a cancelled run awaits its replacement", () => {
+      const runs = new RelevantCheckRuns(
+        [stubCheckRun("lint", "success")],
+        [stubCheckRun("validate", "cancelled")],
+      );
+
+      expect(runs.isOverallSuccess()).toBe(false);
+    });
+
+    it("counts superseded names like succeeded runs", () => {
+      const runs = new RelevantCheckRuns([], [], ["validate"]);
+
+      expect(runs.isOverallSuccess()).toBe(true);
     });
 
     it("returns false when there are no runs at all", () => {
