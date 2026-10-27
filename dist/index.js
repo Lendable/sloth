@@ -31378,7 +31378,10 @@ async function selectForName(name, runs, replacementsOf) {
 function fromReplacements(name, cancelled, candidates, replacements) {
   for (const replacement of replacements) {
     const own = candidates.filter(
-      (candidate) => candidate !== cancelled && replacement.checkSuiteId !== null && candidate.check_suite?.id === replacement.checkSuiteId
+      (candidate) => candidate !== cancelled && replacement.checkSuiteId !== null && candidate.check_suite?.id === replacement.checkSuiteId && // A re-run of the cancelled run shares its check suite with every attempt
+      // of the run, so only the check runs that started after the cancellation
+      // are its own.
+      (replacement.checkSuiteId !== cancelled.check_suite?.id || startedAfter(candidate, cancelled))
     );
     if (own.length > 0) {
       return own;
@@ -31388,6 +31391,10 @@ function fromReplacements(name, cancelled, candidates, replacements) {
     }
   }
   return replacements[0].succeeded ? { kind: "superseded", name } : { kind: "latest", run: cancelled };
+}
+function startedAfter(run2, cancelled) {
+  const start = run2.started_at || run2.completed_at;
+  return !start || !!cancelled.completed_at && start > cancelled.completed_at;
 }
 function mostRecent(runs) {
   return runs.reduce((current, run2) => {
@@ -31463,7 +31470,9 @@ var ReplacementTracker = class {
     if (!cancelledRun) {
       return [];
     }
-    const replacements = runs.filter((run2) => run2.runNumber > cancelledRun.runNumber).sort((a, b) => b.runNumber - a.runNumber);
+    const replacements = runs.filter(
+      (run2) => run2.runNumber > cancelledRun.runNumber && run2.event === cancelledRun.event
+    ).sort((a, b) => b.runNumber - a.runNumber);
     if (job.runAttempt < cancelledRun.runAttempt) {
       replacements.push(cancelledRun);
     }
@@ -31523,7 +31532,8 @@ var actionsApi = {
       runAttempt: run2.run_attempt ?? 1,
       checkSuiteId: run2.check_suite_id ?? null,
       completed: run2.status === "completed",
-      conclusion: run2.conclusion
+      conclusion: run2.conclusion,
+      event: run2.event
     }));
   }
 };

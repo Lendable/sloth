@@ -36,6 +36,7 @@ function workflowRun(
     checkSuiteId: 2000 + runNumber,
     completed,
     conclusion: completed ? "success" : null,
+    event: "pull_request",
     ...overrides,
   };
 }
@@ -144,6 +145,20 @@ describe("ReplacementTracker", () => {
 
     expect(await overPolls(new ReplacementTracker(api, vi.fn()), 1)).toEqual([
       [replacement(2003, false, false), replacement(2002, false, true)],
+    ]);
+  });
+
+  it("ignores newer runs of the workflow triggered by another event", async () => {
+    const run = workflowRun(1);
+    const api = createApi(run, [
+      run,
+      workflowRun(2, { event: "push" }),
+      workflowRun(3, { completed: false }),
+      workflowRun(4, { event: "workflow_dispatch" }),
+    ]);
+
+    expect(await overPolls(new ReplacementTracker(api, vi.fn()), 1)).toEqual([
+      [replacement(2003, false, false)],
     ]);
   });
 

@@ -206,6 +206,20 @@ describe("selectCheckRuns", () => {
     expect(runs.failed).toEqual(["validate"]);
   });
 
+  it("awaits a re-run of the cancelled run rather than using a result from its earlier attempts", async () => {
+    // A run's attempts share one check suite.
+    const runs = await selectCheckRuns(
+      [
+        stubCheckRun(1, "test", "success", "2026-10-23T20:00:00Z", 1),
+        stubCheckRun(2, "test", "cancelled", "2026-10-23T20:21:17Z", 1),
+      ],
+      replacements({ 2: [pending(1)] }),
+    );
+
+    expect(runs.awaitingReplacement).toEqual(["test"]);
+    expect(runs.isOverallSuccess()).toBe(false);
+  });
+
   describe("with a ReplacementTracker", () => {
     /** Run N of workflow 7 has ID 1000 + N and check suite 2000 + N. */
     function workflowRun(
@@ -219,6 +233,7 @@ describe("selectCheckRuns", () => {
         checkSuiteId: 2000 + runNumber,
         completed: true,
         conclusion: "success",
+        event: "pull_request",
         ...overrides,
       };
     }
@@ -315,6 +330,52 @@ describe("selectCheckRuns", () => {
 
       expect(runs.succeeded).toEqual(["validate"]);
       expect(runs.isOverallSuccess()).toBe(true);
+    });
+
+    it("fails when only a run triggered by another event followed the cancelled one", async () => {
+      // The job only runs for pull requests, so the push run skipped it.
+      const tracker = trackerOver([
+        cancelledRun,
+        workflowRun(2, { event: "push" }),
+      ]);
+
+      const runs = await poll(tracker, [
+        stubCheckRun(2, "validate", "skipped", "2026-10-23T20:21:10Z", 2002),
+        cancelledCheckRun(),
+      ]);
+
+      expect(runs.failed).toEqual(["validate"]);
+    });
+
+    it("does not pass on a result from an attempt older than the cancelled one", async () => {
+      // The job was cancelled in attempt 2 of run 1. Attempt 3 has not created its
+      // check run yet, but attempt 1's is in the same check suite.
+      const tracker = new ReplacementTracker(
+        {
+          getJob: vi.fn().mockResolvedValue({
+            runId: 1001,
+            runAttempt: 2,
+            headSha: "a1b2c3d",
+          }),
+          getWorkflowId: vi.fn().mockResolvedValue(7),
+          listRuns: vi.fn().mockResolvedValue([
+            workflowRun(1, {
+              runAttempt: 3,
+              completed: false,
+              conclusion: null,
+            }),
+          ]),
+        },
+        vi.fn(),
+      );
+
+      const runs = await poll(tracker, [
+        stubCheckRun(2, "validate", "success", "2026-10-23T20:00:00Z", 2001),
+        cancelledCheckRun(),
+      ]);
+
+      expect(runs.awaitingReplacement).toEqual(["validate"]);
+      expect(runs.isOverallSuccess()).toBe(false);
     });
 
     it("waits for the newest run instead of passing on an older replacement's success", async () => {

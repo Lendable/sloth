@@ -13,6 +13,7 @@ export interface WorkflowRun {
   checkSuiteId: number | null;
   completed: boolean;
   conclusion: string | null;
+  event: string;
 }
 
 export interface ActionsApi {
@@ -21,7 +22,10 @@ export interface ActionsApi {
   listRuns: (workflowId: number, headSha: string) => Promise<WorkflowRun[]>;
 }
 
-/** A newer run, or a newer attempt, of a cancelled check run's workflow on the same commit. */
+/**
+ * A newer run, or a newer attempt, of a cancelled check run's workflow on the same
+ * commit, triggered by the same event.
+ */
 export interface Replacement {
   /** Its check runs belong to this check suite. A run's attempts share one. */
   checkSuiteId: number | null;
@@ -38,7 +42,8 @@ const successfulConclusions = ["success", "neutral", "skipped"];
 
 /**
  * Finds the newer runs, or newer attempts, of a cancelled GitHub Actions check run's
- * workflow on the same commit.
+ * workflow on the same commit. Only runs triggered by the same event count: a run for
+ * another event can skip or leave out jobs, e.g. with `if: github.event_name == ...`.
  *
  * This happens when a `concurrency` group cancels a workflow run in favour of a newer
  * one, but also when an older run is cancelled by hand. Jobs and workflow IDs never
@@ -121,7 +126,11 @@ export class ReplacementTracker {
     }
 
     const replacements = runs
-      .filter((run) => run.runNumber > cancelledRun.runNumber)
+      .filter(
+        (run) =>
+          run.runNumber > cancelledRun.runNumber &&
+          run.event === cancelledRun.event,
+      )
       .sort((a, b) => b.runNumber - a.runNumber);
 
     if (job.runAttempt < cancelledRun.runAttempt) {

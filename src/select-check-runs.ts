@@ -15,9 +15,11 @@ type Selection =
  * A cancelled check run whose workflow run has been replaced is not the result for
  * its name. Going through the replacements newest first, the first one with its own
  * check run with that name provides the result, even if that finished before the
- * cancellation. A replacement without one that has not settled yet could still create
- * one, so the check awaits it. If no replacement has one, the check is superseded if
- * the newest replacement succeeded, and stands as cancelled if it did not.
+ * cancellation. A re-run of the cancelled run only has the check runs that started
+ * after the cancellation as its own, not those left from earlier attempts. A
+ * replacement without one that has not settled yet could still create one, so the
+ * check awaits it. If no replacement has one, the check is superseded if the newest
+ * replacement succeeded, and stands as cancelled if it did not.
  */
 export async function selectCheckRuns(
   all: CheckRun[],
@@ -94,7 +96,12 @@ function fromReplacements(
       (candidate) =>
         candidate !== cancelled &&
         replacement.checkSuiteId !== null &&
-        candidate.check_suite?.id === replacement.checkSuiteId,
+        candidate.check_suite?.id === replacement.checkSuiteId &&
+        // A re-run of the cancelled run shares its check suite with every attempt
+        // of the run, so only the check runs that started after the cancellation
+        // are its own.
+        (replacement.checkSuiteId !== cancelled.check_suite?.id ||
+          startedAfter(candidate, cancelled)),
     );
 
     if (own.length > 0) {
@@ -109,6 +116,17 @@ function fromReplacements(
   return replacements[0].succeeded
     ? { kind: "superseded", name }
     : { kind: "latest", run: cancelled };
+}
+
+/**
+ * Whether `run` started after `cancelled` completed. Without a `started_at`, its
+ * `completed_at` is the latest it can have started; with neither, it has not started
+ * yet.
+ */
+function startedAfter(run: CheckRun, cancelled: CheckRun): boolean {
+  const start = run.started_at || run.completed_at;
+
+  return !start || (!!cancelled.completed_at && start > cancelled.completed_at);
 }
 
 /**

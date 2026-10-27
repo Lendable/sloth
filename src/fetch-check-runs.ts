@@ -50,6 +50,7 @@ const actionsApi: ActionsApi = {
       checkSuiteId: run.check_suite_id ?? null,
       completed: run.status === "completed",
       conclusion: run.conclusion,
+      event: run.event,
     }));
   },
 };
