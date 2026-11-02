@@ -24,9 +24,13 @@ const logCheckRuns = (
   icon: string,
   color: Color,
   runs: CheckRun["name"][],
+  label = "",
 ): void => {
   if (runs.length > 0) {
-    logAsGroup(`${icon} ${color}${runs.length}${colors.reset}`, runs);
+    logAsGroup(
+      `${icon} ${color}${runs.length}${colors.reset}${label ? ` ${label}` : ""}`,
+      runs,
+    );
   }
 };
 
@@ -71,5 +75,17 @@ export const Display = {
     logCheckRuns("✅", colors.green, checkRuns.succeeded);
     logCheckRuns("❌", colors.red, checkRuns.failed);
     logCheckRuns("⏳", colors.reset, checkRuns.pending);
+    logCheckRuns(
+      "🔁",
+      colors.reset,
+      checkRuns.awaitingReplacement,
+      "cancelled, waiting for the outcome of a newer run of their workflow",
+    );
+    logCheckRuns(
+      "⏭️",
+      colors.reset,
+      checkRuns.superseded,
+      "cancelled and replaced by a newer run of their workflow",
+    );
   },
 };
