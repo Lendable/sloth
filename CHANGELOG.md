@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.2](https://github.com/Lendable/sloth/compare/1.2.1...1.2.2) (2026-11-02)
+
+
+### Bug Fixes
+
+* Don't fail on check runs cancelled by a newer workflow run ([#164](https://github.com/Lendable/sloth/issues/164)) ([e77e78c](https://github.com/Lendable/sloth/commit/e77e78caf5d99b04ff86e2109c0fca2889fb54b3))
+* **sec-auto:** Aikido Fix security issue in undici via minor version upgrade from 7.28.0 to 7.29.0 ([#153](https://github.com/Lendable/sloth/issues/153)) ([1ec67a4](https://github.com/Lendable/sloth/commit/1ec67a4c8fb3592b46e170c9071106225d88555b))
+
 ## [1.2.1](https://github.com/Lendable/sloth/compare/1.2.0...1.2.1) (2026-07-30)
 
 
