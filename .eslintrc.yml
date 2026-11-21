@@ -1,6 +1,6 @@
 env:
   node: true
-  es6: true
+  es2022: true
 
 globals:
   Atomics: readonly
